@@ -8,7 +8,8 @@
    "resolved": 34
   },
   "pruned": 1,
-  "checked": "2026-08-20"
+  "checked": "2026-08-20",
+  "grown": 3
  },
  "sources": [
   {
@@ -1431,6 +1432,14 @@
    "keyword_template": true
   },
   {
+   "company": "Marie Curie",
+   "url": "https://eofb.fa.em3.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC",
+   "platform": "oracle",
+   "sector": "charity",
+   "country": "UK",
+   "domain": "mariecurie.org.uk"
+  },
+  {
    "company": "Marks and Spencer",
    "url": "https://fa-eqid-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC",
    "platform": "oracle",
@@ -1591,6 +1600,14 @@
    "sector": "technology"
   },
   {
+   "company": "Condé Nast",
+   "url": "https://condenast.wd115.myworkdayjobs.com/wday/cxs/condenast/CondeCareers/jobs",
+   "platform": "workday",
+   "sector": "media",
+   "country": "UK",
+   "domain": "condenast.co.uk"
+  },
+  {
    "company": "Crowdstrike",
    "url": "https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/jobs",
    "platform": "workday",
@@ -1715,6 +1732,14 @@
    "sector": "finance",
    "country": "UK",
    "domain": "lseg.com"
+  },
+  {
+   "company": "Nando's UK",
+   "url": "https://nandos.wd3.myworkdayjobs.com/wday/cxs/nandos/Nandos/jobs",
+   "platform": "workday",
+   "sector": "hospitality",
+   "country": "UK",
+   "domain": "nandos.co.uk"
   },
   {
    "company": "Newday",
