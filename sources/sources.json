@@ -6,15 +6,17 @@
   "harvest": {
    "attempted": 196,
    "resolved": 34
-  }
+  },
+  "pruned": 1,
+  "checked": "2026-08-20"
  },
  "sources": [
   {
    "company": "1Password",
    "url": "https://api.ashbyhq.com/posting-api/job-board/1password?includeCompensation=true",
    "platform": "ashby",
-   "domain": "1password.com",
-   "sector": "technology"
+   "sector": "technology",
+   "domain": "1password.com"
   },
   {
    "company": "Airwallex",
@@ -32,8 +34,8 @@
    "company": "Astronomer",
    "url": "https://api.ashbyhq.com/posting-api/job-board/astronomer?includeCompensation=true",
    "platform": "ashby",
-   "domain": "astronomer.io",
-   "sector": "technology"
+   "sector": "technology",
+   "domain": "astronomer.io"
   },
   {
    "company": "Attio",
@@ -123,8 +125,8 @@
    "company": "Deepgram",
    "url": "https://api.ashbyhq.com/posting-api/job-board/Deepgram?includeCompensation=true",
    "platform": "ashby",
-   "domain": "deepgram.com",
-   "sector": "technology"
+   "sector": "technology",
+   "domain": "deepgram.com"
   },
   {
    "company": "Deepl",
@@ -178,8 +180,8 @@
    "company": "Freetrade",
    "url": "https://api.ashbyhq.com/posting-api/job-board/freetrade?includeCompensation=true",
    "platform": "ashby",
-   "domain": "freetrade.io",
-   "sector": "finance"
+   "sector": "finance",
+   "domain": "freetrade.io"
   },
   {
    "company": "Fundingcircle",
@@ -227,8 +229,8 @@
    "company": "LangChain",
    "url": "https://api.ashbyhq.com/posting-api/job-board/langchain?includeCompensation=true",
    "platform": "ashby",
-   "domain": "langchain.com",
-   "sector": "technology"
+   "sector": "technology",
+   "domain": "langchain.com"
   },
   {
    "company": "Latent Labs",
@@ -246,8 +248,8 @@
    "company": "Lendable",
    "url": "https://api.ashbyhq.com/posting-api/job-board/lendable?includeCompensation=true",
    "platform": "ashby",
-   "domain": "lendable.co.uk",
-   "sector": "finance"
+   "sector": "finance",
+   "domain": "lendable.co.uk"
   },
   {
    "company": "Lightdash",
@@ -271,22 +273,22 @@
    "company": "Marshmallow",
    "url": "https://api.ashbyhq.com/posting-api/job-board/marshmallow?includeCompensation=true",
    "platform": "ashby",
-   "domain": "marshmallow.com",
-   "sector": "finance"
+   "sector": "finance",
+   "domain": "marshmallow.com"
   },
   {
    "company": "Material Security",
    "url": "https://api.ashbyhq.com/posting-api/job-board/materialsecurity?includeCompensation=true",
    "platform": "ashby",
-   "domain": "material.security",
-   "sector": "technology"
+   "sector": "technology",
+   "domain": "material.security"
   },
   {
    "company": "Materialize",
    "url": "https://api.ashbyhq.com/posting-api/job-board/materialize?includeCompensation=true",
    "platform": "ashby",
-   "domain": "materialize.com",
-   "sector": "technology"
+   "sector": "technology",
+   "domain": "materialize.com"
   },
   {
    "company": "Mistral AI",
@@ -328,8 +330,8 @@
    "company": "OakNorth",
    "url": "https://api.ashbyhq.com/posting-api/job-board/oaknorth?includeCompensation=true",
    "platform": "ashby",
-   "domain": "oaknorth.co.uk",
-   "sector": "finance"
+   "sector": "finance",
+   "domain": "oaknorth.co.uk"
   },
   {
    "company": "Omnea",
@@ -395,8 +397,8 @@
    "company": "Prefect",
    "url": "https://api.ashbyhq.com/posting-api/job-board/prefect?includeCompensation=true",
    "platform": "ashby",
-   "domain": "prefect.io",
-   "sector": "technology"
+   "sector": "technology",
+   "domain": "prefect.io"
   },
   {
    "company": "Quantexa",
@@ -408,8 +410,8 @@
    "company": "Railway",
    "url": "https://api.ashbyhq.com/posting-api/job-board/railway?includeCompensation=true",
    "platform": "ashby",
-   "domain": "railway.app",
-   "sector": "technology"
+   "sector": "technology",
+   "domain": "railway.app"
   },
   {
    "company": "Ramp",
@@ -489,8 +491,8 @@
    "company": "Socure",
    "url": "https://api.ashbyhq.com/posting-api/job-board/socure?includeCompensation=true",
    "platform": "ashby",
-   "domain": "socure.com",
-   "sector": "technology"
+   "sector": "technology",
+   "domain": "socure.com"
   },
   {
    "company": "Supabase",
@@ -532,8 +534,8 @@
    "company": "TigerData",
    "url": "https://api.ashbyhq.com/posting-api/job-board/tigerdata?includeCompensation=true",
    "platform": "ashby",
-   "domain": "tigerdata.com",
-   "sector": "technology"
+   "sector": "technology",
+   "domain": "tigerdata.com"
   },
   {
    "company": "Trainline",
@@ -545,15 +547,15 @@
    "company": "UpGuard",
    "url": "https://api.ashbyhq.com/posting-api/job-board/upguard?includeCompensation=true",
    "platform": "ashby",
-   "domain": "upguard.com",
-   "sector": "technology"
+   "sector": "technology",
+   "domain": "upguard.com"
   },
   {
    "company": "Vanta",
    "url": "https://api.ashbyhq.com/posting-api/job-board/vanta?includeCompensation=true",
    "platform": "ashby",
-   "domain": "vanta.com",
-   "sector": "technology"
+   "sector": "technology",
+   "domain": "vanta.com"
   },
   {
    "company": "Vertical Aerospace",
@@ -595,8 +597,8 @@
    "company": "Zilch",
    "url": "https://api.ashbyhq.com/posting-api/job-board/zilch?includeCompensation=true",
    "platform": "ashby",
-   "domain": "zilch.com",
-   "sector": "finance"
+   "sector": "finance",
+   "domain": "zilch.com"
   },
   {
    "company": "Metro Bank",
@@ -727,12 +729,6 @@
   {
    "company": "Chainguard",
    "url": "https://boards-api.greenhouse.io/v1/boards/chainguard/jobs?content=true&pay_transparency=true",
-   "platform": "greenhouse",
-   "sector": "technology"
-  },
-  {
-   "company": "Cherryventures",
-   "url": "https://boards-api.greenhouse.io/v1/boards/cherryventures/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
    "sector": "technology"
   },
@@ -1422,17 +1418,17 @@
   },
   {
    "company": "LinkedIn",
+   "url": "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={keyword}&location=United%20Kingdom&f_TPR=r604800&start=0",
    "platform": "linkedin",
-   "keyword_template": true,
-   "url": "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={keyword}&location=United%20Kingdom&f_TPR=r604800&start=0"
+   "keyword_template": true
   },
   {
    "company": "NHS Jobs",
+   "url": "https://www.jobs.nhs.uk/candidate/search/results?keyword={keyword}",
    "platform": "nhs",
    "sector": "healthcare",
    "country": "UK",
-   "keyword_template": true,
-   "url": "https://www.jobs.nhs.uk/candidate/search/results?keyword={keyword}"
+   "keyword_template": true
   },
   {
    "company": "Marks and Spencer",
@@ -1546,25 +1542,53 @@
    "company": "Accenture",
    "url": "https://accenture.wd103.myworkdayjobs.com/wday/cxs/accenture/AccentureCareers/jobs",
    "platform": "workday",
-   "sector": "professional-services"
+   "sector": "professional-services",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Adobe",
    "url": "https://adobe.wd5.myworkdayjobs.com/wday/cxs/adobe/external_experienced/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Aviva",
    "url": "https://aviva.wd1.myworkdayjobs.com/wday/cxs/aviva/External/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Barclays",
    "url": "https://barclays.wd3.myworkdayjobs.com/wday/cxs/barclays/External_Career_Site_Barclays/jobs",
    "platform": "workday",
-   "sector": "finance"
+   "sector": "finance",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "BP",
@@ -1572,13 +1596,27 @@
    "platform": "workday",
    "sector": "industry",
    "country": "UK",
-   "domain": "bp.com"
+   "domain": "bp.com",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Broadcom",
    "url": "https://broadcom.wd1.myworkdayjobs.com/wday/cxs/broadcom/External_Career/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Cancer Research UK",
@@ -1586,25 +1624,53 @@
    "platform": "workday",
    "sector": "charity",
    "country": "UK",
-   "domain": "cancerresearchuk.org"
+   "domain": "cancerresearchuk.org",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Cisco",
    "url": "https://cisco.wd5.myworkdayjobs.com/wday/cxs/cisco/Cisco_Careers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Crowdstrike",
    "url": "https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Darktrace",
    "url": "https://darktrace.wd3.myworkdayjobs.com/wday/cxs/darktrace/DarktaceExternal/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Diageo",
@@ -1612,19 +1678,40 @@
    "platform": "workday",
    "sector": "industry",
    "country": "UK",
-   "domain": "diageo.com"
+   "domain": "diageo.com",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Entrust",
    "url": "https://entrust.wd1.myworkdayjobs.com/wday/cxs/entrust/EntrustCareers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Ffive",
    "url": "https://ffive.wd5.myworkdayjobs.com/wday/cxs/ffive/f5jobs/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Financial Conduct Authority",
@@ -1632,13 +1719,27 @@
    "platform": "workday",
    "sector": "public-sector",
    "country": "UK",
-   "domain": "fca.org.uk"
+   "domain": "fca.org.uk",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Garrison",
    "url": "https://evergreenix.wd1.myworkdayjobs.com/wday/cxs/evergreenix/external-careers2/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Hargreaves Lansdown",
@@ -1646,19 +1747,40 @@
    "platform": "workday",
    "sector": "finance",
    "country": "UK",
-   "domain": "hl.co.uk"
+   "domain": "hl.co.uk",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Hp",
    "url": "https://hp.wd5.myworkdayjobs.com/wday/cxs/hp/ExternalCareerSite/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Hpe",
    "url": "https://hpe.wd5.myworkdayjobs.com/wday/cxs/hpe/Jobsathpe/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Johnson Matthey",
@@ -1666,7 +1788,14 @@
    "platform": "workday",
    "sector": "industry",
    "country": "UK",
-   "domain": "matthey.com"
+   "domain": "matthey.com",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Kainos",
@@ -1674,7 +1803,14 @@
    "platform": "workday",
    "sector": "professional-services",
    "country": "UK",
-   "domain": "kainos.com"
+   "domain": "kainos.com",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Knight Frank",
@@ -1682,19 +1818,40 @@
    "platform": "workday",
    "sector": "professional-services",
    "country": "UK",
-   "domain": "knightfrank.com"
+   "domain": "knightfrank.com",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Lbg",
    "url": "https://lbg.wd3.myworkdayjobs.com/wday/cxs/lbg/lbg_Careers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Leidos",
    "url": "https://leidos.wd5.myworkdayjobs.com/wday/cxs/leidos/External/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Linklaters",
@@ -1702,7 +1859,14 @@
    "platform": "workday",
    "sector": "professional-services",
    "country": "UK",
-   "domain": "linklaters.com"
+   "domain": "linklaters.com",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Lloyds Banking Group",
@@ -1710,7 +1874,14 @@
    "platform": "workday",
    "sector": "finance",
    "country": "UK",
-   "domain": "lloydsbankinggroup.com"
+   "domain": "lloydsbankinggroup.com",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "London Stock Exchange Group",
@@ -1718,43 +1889,92 @@
    "platform": "workday",
    "sector": "finance",
    "country": "UK",
-   "domain": "lseg.com"
+   "domain": "lseg.com",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Newday",
    "url": "https://newday.wd3.myworkdayjobs.com/wday/cxs/newday/NewDay/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Nvidia",
    "url": "https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Ofcom",
    "url": "https://ofcom.wd3.myworkdayjobs.com/wday/cxs/ofcom/Ofcom_Careers/jobs",
    "platform": "workday",
-   "sector": "public-sector"
+   "sector": "public-sector",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Ordnancesurvey",
    "url": "https://ordnancesurvey.wd3.myworkdayjobs.com/wday/cxs/ordnancesurvey/OS_Careers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Paloaltonetworks",
    "url": "https://paloaltonetworks.wd5.myworkdayjobs.com/wday/cxs/paloaltonetworks/panwexternalcareers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Proofpoint",
    "url": "https://proofpoint.wd5.myworkdayjobs.com/wday/cxs/proofpoint/proofpointcareers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Prudential",
@@ -1762,55 +1982,118 @@
    "platform": "workday",
    "sector": "finance",
    "country": "UK",
-   "domain": "prudentialplc.com"
+   "domain": "prudentialplc.com",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Pwc",
    "url": "https://pwc.wd3.myworkdayjobs.com/wday/cxs/pwc/Global_Experienced_Careers/jobs",
    "platform": "workday",
-   "sector": "professional-services"
+   "sector": "professional-services",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Qualys",
    "url": "https://qualys.wd5.myworkdayjobs.com/wday/cxs/qualys/Careers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Rapid7",
    "url": "https://mymoose.wd1.myworkdayjobs.com/wday/cxs/mymoose/careers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Rbs",
    "url": "https://rbs.wd3.myworkdayjobs.com/wday/cxs/rbs/RBS/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Redhat",
    "url": "https://redhat.wd5.myworkdayjobs.com/wday/cxs/redhat/Jobs/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Rollsroyce",
    "url": "https://rollsroyce.wd3.myworkdayjobs.com/wday/cxs/rollsroyce/professional/jobs",
    "platform": "workday",
-   "sector": "industry"
+   "sector": "industry",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Salesforce",
    "url": "https://salesforce.wd12.myworkdayjobs.com/wday/cxs/salesforce/External_Career_Site/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Santander",
    "url": "https://santander.wd3.myworkdayjobs.com/wday/cxs/santander/SantanderCareers/jobs",
    "platform": "workday",
-   "sector": "finance"
+   "sector": "finance",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Shell",
@@ -1818,19 +2101,40 @@
    "platform": "workday",
    "sector": "industry",
    "country": "UK",
-   "domain": "shell.com"
+   "domain": "shell.com",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Sky",
    "url": "https://sky.wd3.myworkdayjobs.com/wday/cxs/sky/sky_careers/jobs",
    "platform": "workday",
-   "sector": "media"
+   "sector": "media",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Snyk",
    "url": "https://snyk.wd103.myworkdayjobs.com/wday/cxs/snyk/External/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "TalkTalk",
@@ -1838,13 +2142,27 @@
    "platform": "workday",
    "sector": "telecoms",
    "country": "UK",
-   "domain": "talktalk.co.uk"
+   "domain": "talktalk.co.uk",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Trellix",
    "url": "https://trellix.wd1.myworkdayjobs.com/wday/cxs/trellix/EnterpriseCareers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Unilever",
@@ -1852,7 +2170,14 @@
    "platform": "workday",
    "sector": "industry",
    "country": "UK",
-   "domain": "unilever.com"
+   "domain": "unilever.com",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Weir Group",
@@ -1860,13 +2185,27 @@
    "platform": "workday",
    "sector": "industry",
    "country": "UK",
-   "domain": "global.weir"
+   "domain": "global.weir",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   },
   {
    "company": "Workday",
    "url": "https://workday.wd5.myworkdayjobs.com/wday/cxs/workday/Workday/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "technology",
+   "method": "POST",
+   "body": {
+    "appliedFacets": {},
+    "limit": 20,
+    "offset": 0,
+    "searchText": ""
+   }
   }
  ]
 }
