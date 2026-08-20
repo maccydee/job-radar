@@ -6,7 +6,9 @@
   "harvest": {
    "attempted": 196,
    "resolved": 34
-  }
+  },
+  "pruned": 1,
+  "checked": "2026-08-20"
  },
  "sources": [
   {
@@ -727,12 +729,6 @@
   {
    "company": "Chainguard",
    "url": "https://boards-api.greenhouse.io/v1/boards/chainguard/jobs?content=true&pay_transparency=true",
-   "platform": "greenhouse",
-   "sector": "technology"
-  },
-  {
-   "company": "Cherryventures",
-   "url": "https://boards-api.greenhouse.io/v1/boards/cherryventures/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
    "sector": "technology"
   },
