@@ -7,8 +7,8 @@
    "attempted": 196,
    "resolved": 34
   },
-  "pruned": 1,
-  "checked": "2026-08-20",
+  "pruned": 2,
+  "checked": "2026-08-23",
   "grown": 3
  },
  "sources": [
@@ -603,14 +603,6 @@
    "url": "https://api.ashbyhq.com/posting-api/job-board/signal-ai?includeCompensation=true",
    "platform": "ashby",
    "sector": "technology"
-  },
-  {
-   "company": "Skyscanner",
-   "url": "https://api.ashbyhq.com/posting-api/job-board/skyscanner?includeCompensation=true",
-   "platform": "ashby",
-   "sector": "travel",
-   "country": "UK",
-   "domain": "skyscanner.net"
   },
   {
    "company": "Smarkets",
@@ -2462,14 +2454,6 @@
    "sector": "public-sector",
    "country": "UK",
    "domain": "norfolk.gov.uk"
-  },
-  {
-   "company": "Northern Powergrid",
-   "url": "https://ianvme.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC",
-   "platform": "oracle",
-   "sector": "industry",
-   "country": "UK",
-   "domain": "northernpowergrid.com"
   },
   {
    "company": "Nottingham City Council",
