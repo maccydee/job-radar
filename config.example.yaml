@@ -58,7 +58,7 @@ dealbreakers:
 # Which employers to watch. Empty means all of them.
 # These are the tags that actually exist in the bundled list. A sector not in
 # this list matches nothing. Check yours with `job-radar coverage`.
-# charity, education, finance, healthcare, hospitality, industry, legal, media, professional-services, public-sector, retail, technology, telecoms, travel
+# charity, education, finance, healthcare, hospitality, industry, legal, media, professional-services, public-sector, retail, security, technology, telecoms, travel
 # Full reference: docs/CONFIG.md
 sectors: []
 

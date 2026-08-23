@@ -35,7 +35,7 @@ COMMON_DEALBREAKERS = {
 SECTORS = [
     "technology", "finance", "healthcare", "public-sector", "education",
     "retail", "industry", "professional-services", "media", "travel",
-    "telecoms", "charity", "hospitality", "legal",
+    "telecoms", "charity", "hospitality", "legal", "security",
 ]
 
 # Job titles as they appear on a real CV: usually followed by an employer, a

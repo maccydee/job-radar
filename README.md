@@ -452,6 +452,15 @@ the config. Public policy is the same story: one UK government-sector board is
 on the list, and a Grade 7 policy adviser's entire result set came from
 LinkedIn and NHS Jobs.
 
+**`security` is a new sector tag.** Vendors used to be filed under
+`technology`, so `job-radar coverage` had no way to tell a security engineer
+how much of that 261 actually applied to them. 33 of them — CrowdStrike,
+Darktrace, SentinelOne, Snyk, Semgrep, Wiz, Okta, Rapid7 among them — are
+retagged `security` now, which is a relabelling, not new employers. The list
+is still thin at the MSSP and consultancy end (S-RM is the only one so far)
+and outside the UK and US, where it has none. `discover` finds these the same
+way as anywhere else; nobody has pointed it at that end of the market yet.
+
 **Whole sectors on platforms not yet supported.** Harvesting UK employers
 resolved 34 boards from 196 attempted, and healthcare resolved **zero of 25**,
 because NHS trusts use NHS Jobs rather than any commercial applicant tracking

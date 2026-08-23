@@ -66,11 +66,12 @@ actually exist in the bundled list:
 
 | sector | sources |
 |---|---|
-| `technology` | 261 |
+| `technology` | 229 |
 | `finance` | 75 |
 | `healthcare` | 45 |
 | `industry` | 43 |
-| `professional-services` | 35 |
+| `professional-services` | 34 |
+| `security` | 33 |
 | `media` | 31 |
 | `telecoms` | 26 |
 | `public-sector` | 25 |

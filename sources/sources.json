@@ -16,7 +16,7 @@
    "company": "1Password",
    "url": "https://api.ashbyhq.com/posting-api/job-board/1password?includeCompensation=true",
    "platform": "ashby",
-   "sector": "technology",
+   "sector": "security",
    "domain": "1password.com"
   },
   {
@@ -160,7 +160,7 @@
    "company": "Cyberhaven",
    "url": "https://api.ashbyhq.com/posting-api/job-board/cyberhaven?includeCompensation=true",
    "platform": "ashby",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Cytora",
@@ -284,7 +284,7 @@
    "company": "Immersive Labs",
    "url": "https://api.ashbyhq.com/posting-api/job-board/immersivelabs?includeCompensation=true",
    "platform": "ashby",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Improbable",
@@ -393,7 +393,7 @@
    "company": "Material Security",
    "url": "https://api.ashbyhq.com/posting-api/job-board/materialsecurity?includeCompensation=true",
    "platform": "ashby",
-   "sector": "technology",
+   "sector": "security",
    "domain": "material.security"
   },
   {
@@ -590,7 +590,7 @@
    "company": "Semgrep",
    "url": "https://api.ashbyhq.com/posting-api/job-board/semgrep?includeCompensation=true",
    "platform": "ashby",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Siena",
@@ -716,14 +716,14 @@
    "company": "UpGuard",
    "url": "https://api.ashbyhq.com/posting-api/job-board/upguard?includeCompensation=true",
    "platform": "ashby",
-   "sector": "technology",
+   "sector": "security",
    "domain": "upguard.com"
   },
   {
    "company": "Vanta",
    "url": "https://api.ashbyhq.com/posting-api/job-board/vanta?includeCompensation=true",
    "platform": "ashby",
-   "sector": "technology",
+   "sector": "security",
    "domain": "vanta.com"
   },
   {
@@ -799,7 +799,7 @@
    "company": "Abnormal",
    "url": "https://boards-api.greenhouse.io/v1/boards/abnormalsecurity/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Addepar1",
@@ -955,7 +955,7 @@
    "company": "Chainguard",
    "url": "https://boards-api.greenhouse.io/v1/boards/chainguard/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "City of Edinburgh Council",
@@ -1105,7 +1105,7 @@
    "company": "Egress/KnowBe4",
    "url": "https://boards-api.greenhouse.io/v1/boards/knowbe4/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Elastic",
@@ -1311,7 +1311,7 @@
    "company": "Huntress",
    "url": "https://boards-api.greenhouse.io/v1/boards/huntress/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "professional-services",
+   "sector": "security",
    "country": "UK",
    "domain": "huntress.co.uk"
   },
@@ -1465,13 +1465,13 @@
    "company": "Netcraft",
    "url": "https://boards-api.greenhouse.io/v1/boards/netcraft/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Netskope",
    "url": "https://boards-api.greenhouse.io/v1/boards/netskope/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Nscale",
@@ -1497,19 +1497,19 @@
    "company": "Okta",
    "url": "https://boards-api.greenhouse.io/v1/boards/okta/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "OneTrust",
    "url": "https://boards-api.greenhouse.io/v1/boards/onetrust/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Orca",
    "url": "https://boards-api.greenhouse.io/v1/boards/orcasecurity/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Overstory",
@@ -1599,7 +1599,7 @@
    "company": "Recorded Future",
    "url": "https://boards-api.greenhouse.io/v1/boards/recordedfuture/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Red Badger",
@@ -1649,7 +1649,7 @@
    "company": "S-RM",
    "url": "https://boards-api.greenhouse.io/v1/boards/srm/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology",
+   "sector": "security",
    "country": "UK",
    "domain": "s-rminform.com"
   },
@@ -1683,7 +1683,7 @@
    "company": "SentinelOne",
    "url": "https://boards-api.greenhouse.io/v1/boards/sentinellabs/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Sir Robert McAlpine",
@@ -1767,7 +1767,7 @@
    "company": "Tenable",
    "url": "https://boards-api.greenhouse.io/v1/boards/tenableinc/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Teneo UK",
@@ -1803,7 +1803,7 @@
    "company": "ThreatLocker",
    "url": "https://boards-api.greenhouse.io/v1/boards/threatlocker/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Tide",
@@ -1925,7 +1925,7 @@
    "company": "Wiz",
    "url": "https://boards-api.greenhouse.io/v1/boards/wizinc/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Wpp",
@@ -1949,7 +1949,7 @@
    "company": "Zscaler",
    "url": "https://boards-api.greenhouse.io/v1/boards/zscaler/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Aon UK",
@@ -2209,7 +2209,7 @@
    "company": "Sophos",
    "url": "https://api.lever.co/v0/postings/sophos?mode=json",
    "platform": "lever",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Spotify",
@@ -2227,7 +2227,7 @@
    "company": "Sysdig",
    "url": "https://api.lever.co/v0/postings/sysdig?mode=json",
    "platform": "lever",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Yuno",
@@ -2731,7 +2731,7 @@
    "company": "WithSecure",
    "url": "https://withsecure.jobs.personio.de/xml",
    "platform": "personio",
-   "sector": "technology",
+   "sector": "security",
    "country": "UK",
    "domain": "withsecure.com"
   },
@@ -3995,7 +3995,7 @@
    "company": "Crowdstrike",
    "url": "https://crowdstrike.wd5.myworkdayjobs.com/wday/cxs/crowdstrike/crowdstrikecareers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "CSG International",
@@ -4009,7 +4009,7 @@
    "company": "Darktrace",
    "url": "https://darktrace.wd3.myworkdayjobs.com/wday/cxs/darktrace/DarktaceExternal/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "David Lloyd Leisure",
@@ -4439,7 +4439,7 @@
    "company": "Proofpoint",
    "url": "https://proofpoint.wd5.myworkdayjobs.com/wday/cxs/proofpoint/proofpointcareers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Prudential",
@@ -4475,7 +4475,7 @@
    "company": "Qualys",
    "url": "https://qualys.wd5.myworkdayjobs.com/wday/cxs/qualys/Careers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Ramsay Health Care UK",
@@ -4489,7 +4489,7 @@
    "company": "Rapid7",
    "url": "https://mymoose.wd1.myworkdayjobs.com/wday/cxs/mymoose/careers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Rbs",
@@ -4579,7 +4579,7 @@
    "company": "Snyk",
    "url": "https://snyk.wd103.myworkdayjobs.com/wday/cxs/snyk/External/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Sovereign Housing Association",
@@ -4641,7 +4641,7 @@
    "company": "Trellix",
    "url": "https://trellix.wd1.myworkdayjobs.com/wday/cxs/trellix/EnterpriseCareers/jobs",
    "platform": "workday",
-   "sector": "technology"
+   "sector": "security"
   },
   {
    "company": "Unilever",
