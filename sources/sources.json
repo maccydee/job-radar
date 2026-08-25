@@ -4,7 +4,7 @@
   "version": 6,
   "validated": "2026-08-25",
   "checked": "2026-08-25",
-  "boards": 17807
+  "boards": 17819
  },
  "sources": [
   {
@@ -1959,6 +1959,7 @@
    "company": "Blackpoint Cyber",
    "url": "https://api.ashbyhq.com/posting-api/job-board/blackpoint%20cyber?includeCompensation=true",
    "platform": "ashby",
+   "sector": "security",
    "country": "multi"
   },
   {
@@ -4378,6 +4379,7 @@
    "company": "Ent Security",
    "url": "https://api.ashbyhq.com/posting-api/job-board/ent-security?includeCompensation=true",
    "platform": "ashby",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -4543,7 +4545,7 @@
    "company": "Eye Security",
    "url": "https://api.ashbyhq.com/posting-api/job-board/eye-security?includeCompensation=true",
    "platform": "ashby",
-   "sector": "finance",
+   "sector": "security",
    "country": "multi"
   },
   {
@@ -5770,6 +5772,7 @@
    "company": "Hackerone",
    "url": "https://api.ashbyhq.com/posting-api/job-board/hackerone?includeCompensation=true",
    "platform": "ashby",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -5861,6 +5864,7 @@
    "company": "Harmonic Security Inc",
    "url": "https://api.ashbyhq.com/posting-api/job-board/harmonic-security-inc?includeCompensation=true",
    "platform": "ashby",
+   "sector": "security",
    "country": "multi"
   },
   {
@@ -6229,6 +6233,7 @@
    "company": "Horizon3Ai",
    "url": "https://api.ashbyhq.com/posting-api/job-board/horizon3ai?includeCompensation=true",
    "platform": "ashby",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -8927,7 +8932,7 @@
    "company": "Nord Security",
    "url": "https://api.ashbyhq.com/posting-api/job-board/nord-security?includeCompensation=true",
    "platform": "ashby",
-   "sector": "telecoms",
+   "sector": "security",
    "country": "PL"
   },
   {
@@ -10590,6 +10595,7 @@
    "company": "Prophet Security",
    "url": "https://api.ashbyhq.com/posting-api/job-board/prophet-security?includeCompensation=true",
    "platform": "ashby",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -12130,6 +12136,7 @@
    "company": "Security Level 5",
    "url": "https://api.ashbyhq.com/posting-api/job-board/security-level-5?includeCompensation=true",
    "platform": "ashby",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -16090,6 +16097,7 @@
    "company": "Zip Security",
    "url": "https://api.ashbyhq.com/posting-api/job-board/zip%20security?includeCompensation=true",
    "platform": "ashby",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -18574,6 +18582,7 @@
    "company": "Cyber Advisors",
    "url": "https://cyber-advisors.breezy.hr/json",
    "platform": "breezy",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -18586,6 +18595,7 @@
    "company": "Cybervance",
    "url": "https://cybervance.breezy.hr/json",
    "platform": "breezy",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -21743,6 +21753,7 @@
    "company": "PUNCH Cyber Analytics Group",
    "url": "https://punch-cyber-analytics-group.breezy.hr/json",
    "platform": "breezy",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -26038,6 +26049,7 @@
    "company": "Armis Security",
    "url": "https://boards-api.greenhouse.io/v1/boards/armissecurity/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "multi"
   },
   {
@@ -26669,6 +26681,7 @@
    "company": "Axonius",
    "url": "https://boards-api.greenhouse.io/v1/boards/axonius/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "multi"
   },
   {
@@ -27302,7 +27315,8 @@
    "company": "Bishop Fox",
    "url": "https://boards-api.greenhouse.io/v1/boards/bishopfox/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "country": "MX"
+   "sector": "security",
+   "country": "US"
   },
   {
    "company": "Bitgo",
@@ -28092,6 +28106,7 @@
    "company": "Bugcrowd",
    "url": "https://boards-api.greenhouse.io/v1/boards/bugcrowd/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -28745,6 +28760,7 @@
    "company": "Cato Networks",
    "url": "https://boards-api.greenhouse.io/v1/boards/catonetworks/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "multi"
   },
   {
@@ -29490,6 +29506,7 @@
    "company": "Coalition, Inc.",
    "url": "https://boards-api.greenhouse.io/v1/boards/coalition/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "multi"
   },
   {
@@ -30171,6 +30188,7 @@
    "company": "Cowbell Cyber Inc.",
    "url": "https://boards-api.greenhouse.io/v1/boards/cowbellcyber/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -30417,16 +30435,25 @@
    "country": "multi"
   },
   {
+   "company": "Cybereason",
+   "url": "https://boards-api.greenhouse.io/v1/boards/cybereason/jobs?content=true&pay_transparency=true",
+   "platform": "greenhouse",
+   "sector": "security",
+   "country": "multi",
+   "domain": "cybereason.com"
+  },
+  {
    "company": "CyberMedia Technologies",
    "url": "https://boards-api.greenhouse.io/v1/boards/cybermediatechnologies/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "finance",
+   "sector": "security",
    "country": "US"
   },
   {
    "company": "Cybersheath",
    "url": "https://boards-api.greenhouse.io/v1/boards/cybersheath/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -32353,6 +32380,7 @@
    "company": "Expel",
    "url": "https://boards-api.greenhouse.io/v1/boards/expel/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -34355,6 +34383,14 @@
    "country": "US"
   },
   {
+   "company": "Group-IB",
+   "url": "https://boards-api.greenhouse.io/v1/boards/groupib/jobs?content=true&pay_transparency=true",
+   "platform": "greenhouse",
+   "sector": "security",
+   "country": "SG",
+   "domain": "group-ib.com"
+  },
+  {
    "company": "Group14 Technologies",
    "url": "https://boards-api.greenhouse.io/v1/boards/group14/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
@@ -34473,6 +34509,7 @@
    "company": "GuidePoint Security",
    "url": "https://boards-api.greenhouse.io/v1/boards/guidepointsecurity/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -36560,6 +36597,7 @@
    "company": "Keeper Security",
    "url": "https://boards-api.greenhouse.io/v1/boards/keepersecurity/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -37194,6 +37232,7 @@
    "company": "Legato Security",
    "url": "https://boards-api.greenhouse.io/v1/boards/legatosecurity/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -40087,7 +40126,7 @@
    "company": "Nozomi Networks",
    "url": "https://boards-api.greenhouse.io/v1/boards/nozominetworks/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "transport",
+   "sector": "security",
    "country": "multi"
   },
   {
@@ -40219,6 +40258,7 @@
    "company": "Oasis Security",
    "url": "https://boards-api.greenhouse.io/v1/boards/oasissecurity/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -40237,6 +40277,7 @@
    "company": "Obsidian Security",
    "url": "https://boards-api.greenhouse.io/v1/boards/obsidiansecurity/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -42189,6 +42230,14 @@
    "url": "https://boards-api.greenhouse.io/v1/boards/practisinglawinstitute/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
    "country": "US"
+  },
+  {
+   "company": "Praetorian",
+   "url": "https://boards-api.greenhouse.io/v1/boards/praetorian/jobs?content=true&pay_transparency=true",
+   "platform": "greenhouse",
+   "sector": "security",
+   "country": "US",
+   "domain": "praetorian.com"
   },
   {
    "company": "Pratham International",
@@ -44318,6 +44367,7 @@
    "company": "Securityscorecard",
    "url": "https://boards-api.greenhouse.io/v1/boards/securityscorecard/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -45567,6 +45617,7 @@
    "company": "Sprocket Security",
    "url": "https://boards-api.greenhouse.io/v1/boards/sprocketsecurity/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -46111,7 +46162,8 @@
   {
    "company": "Surefire Cyber",
    "url": "https://boards-api.greenhouse.io/v1/boards/surefirecyber/jobs?content=true&pay_transparency=true",
-   "platform": "greenhouse"
+   "platform": "greenhouse",
+   "sector": "security"
   },
   {
    "company": "Sureify",
@@ -46166,6 +46218,7 @@
    "company": "Sweet Security",
    "url": "https://boards-api.greenhouse.io/v1/boards/sweetsecurity/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "IL"
   },
   {
@@ -46199,6 +46252,7 @@
    "company": "Synack",
    "url": "https://boards-api.greenhouse.io/v1/boards/synack/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -47517,7 +47571,7 @@
    "company": "Transmit Security",
    "url": "https://boards-api.greenhouse.io/v1/boards/transmitsecurity/jobs?content=true&pay_transparency=true",
    "platform": "greenhouse",
-   "sector": "telecoms",
+   "sector": "security",
    "country": "IL"
   },
   {
@@ -47678,7 +47732,8 @@
   {
    "company": "Truffle Security",
    "url": "https://boards-api.greenhouse.io/v1/boards/trufflesecurity/jobs?content=true&pay_transparency=true",
-   "platform": "greenhouse"
+   "platform": "greenhouse",
+   "sector": "security"
   },
   {
    "company": "Trulove Orthodontics",
@@ -52230,6 +52285,7 @@
    "company": "Coalfire Federal",
    "url": "https://federal-coalfire.icims.com/jobs/search?ss=1&in_iframe=1",
    "platform": "icims",
+   "sector": "security",
    "country": "US"
   },
   {
@@ -62191,12 +62247,28 @@
    "domain": "cambiumnetworks.com"
   },
   {
+   "company": "Coalfire",
+   "url": "https://api.lever.co/v0/postings/coalfire?mode=json",
+   "platform": "lever",
+   "sector": "security",
+   "country": "US",
+   "domain": "coalfire.com"
+  },
+  {
    "company": "Community Integrated Care",
    "url": "https://api.lever.co/v0/postings/cic?mode=json",
    "platform": "lever",
    "sector": "charity",
    "country": "UK",
    "domain": "c-i-c.co.uk"
+  },
+  {
+   "company": "Cyderes",
+   "url": "https://api.lever.co/v0/postings/cyderes?mode=json",
+   "platform": "lever",
+   "sector": "security",
+   "country": "US",
+   "domain": "cyderes.com"
   },
   {
    "company": "Farfetch",
@@ -62327,6 +62399,14 @@
    "country": "multi"
   },
   {
+   "company": "Tevora",
+   "url": "https://api.lever.co/v0/postings/tevora?mode=json",
+   "platform": "lever",
+   "sector": "security",
+   "country": "US",
+   "domain": "tevora.com"
+  },
+  {
    "company": "Yuno",
    "url": "https://api.lever.co/v0/postings/yuno?mode=json",
    "platform": "lever",
@@ -62372,7 +62452,9 @@
   {
    "company": "CoreTech Security Services",
    "url": "https://api.eu.lever.co/v0/postings/coretechsecurity?mode=json",
-   "platform": "lever_eu"
+   "platform": "lever_eu",
+   "sector": "security",
+   "country": "UK"
   },
   {
    "company": "Creatio",
@@ -74131,7 +74213,9 @@
   {
    "company": "Usd Ag",
    "url": "https://usd-ag.jobs.personio.de/xml",
-   "platform": "personio"
+   "platform": "personio",
+   "sector": "security",
+   "country": "DE"
   },
   {
    "company": "Uxma",
@@ -79216,7 +79300,7 @@
    "company": "On2It",
    "url": "https://on2it.recruitee.com/api/offers/",
    "platform": "recruitee",
-   "sector": "healthcare",
+   "sector": "security",
    "country": "NL"
   },
   {
@@ -81825,6 +81909,14 @@
    "country": "FR"
   },
   {
+   "company": "Advens",
+   "url": "https://api.smartrecruiters.com/v1/companies/ADVENS/postings?limit=100",
+   "platform": "smartrecruiters",
+   "sector": "security",
+   "country": "FR",
+   "domain": "advens.fr"
+  },
+  {
    "company": "AECOM",
    "url": "https://api.smartrecruiters.com/v1/companies/aecom2/postings?limit=100",
    "platform": "smartrecruiters",
@@ -83045,6 +83137,7 @@
    "company": "Cybervadis",
    "url": "https://api.smartrecruiters.com/v1/companies/cybervadis/postings?limit=100",
    "platform": "smartrecruiters",
+   "sector": "security",
    "country": "FR"
   },
   {
@@ -89659,6 +89752,14 @@
    "platform": "workable"
   },
   {
+   "company": "BreachLock",
+   "url": "https://apply.workable.com/api/v1/widget/accounts/breachlock",
+   "platform": "workable",
+   "sector": "security",
+   "country": "multi",
+   "domain": "breachlock.com"
+  },
+  {
    "company": "Breakaway",
    "url": "https://apply.workable.com/api/v1/widget/accounts/breakaway",
    "platform": "workable"
@@ -90930,7 +91031,8 @@
   {
    "company": "Cryptonext Security",
    "url": "https://apply.workable.com/api/v1/widget/accounts/cryptonext-security",
-   "platform": "workable"
+   "platform": "workable",
+   "sector": "security"
   },
   {
    "company": "Crystalia Glass",
@@ -92013,7 +92115,8 @@
   {
    "company": "Evolve Security",
    "url": "https://apply.workable.com/api/v1/widget/accounts/evolve-security",
-   "platform": "workable"
+   "platform": "workable",
+   "sector": "security"
   },
   {
    "company": "Evolving Web",
@@ -95799,7 +95902,8 @@
   {
    "company": "Obrela Security Industries Sa",
    "url": "https://apply.workable.com/api/v1/widget/accounts/obrela-security-industries-sa",
-   "platform": "workable"
+   "platform": "workable",
+   "sector": "security"
   },
   {
    "company": "Oceansxyz",
@@ -97418,7 +97522,8 @@
   {
    "company": "Stellar Cyber",
    "url": "https://apply.workable.com/api/v1/widget/accounts/stellar-cyber",
-   "platform": "workable"
+   "platform": "workable",
+   "sector": "security"
   },
   {
    "company": "Stio",
@@ -98464,10 +98569,10 @@
   },
   {
    "company": "Workable search",
-   "platform": "workable_search",
    "url": "https://jobs.workable.com/api/v1/jobs?query={keyword}&location={country}",
-   "keyword_template": true,
-   "country": "multi"
+   "platform": "workable_search",
+   "country": "multi",
+   "keyword_template": true
   },
   {
    "company": "0104 Clifton Park Hospital",
@@ -98516,6 +98621,30 @@
    "platform": "workday",
    "sector": "retail",
    "country": "AU"
+  },
+  {
+   "company": "Arctic Wolf",
+   "url": "https://arcticwolf.wd1.myworkdayjobs.com/wday/cxs/arcticwolf/External/jobs",
+   "platform": "workday",
+   "sector": "security",
+   "country": "multi",
+   "domain": "arcticwolf.com"
+  },
+  {
+   "company": "Optiv",
+   "url": "https://optiv.wd5.myworkdayjobs.com/wday/cxs/optiv/Optiv_Careers/jobs",
+   "platform": "workday",
+   "sector": "security",
+   "country": "US",
+   "domain": "optiv.com"
+  },
+  {
+   "company": "ReliaQuest",
+   "url": "https://reliaquest.wd5.myworkdayjobs.com/wday/cxs/reliaquest/ReliaQuest_Careers/jobs",
+   "platform": "workday",
+   "sector": "security",
+   "country": "US",
+   "domain": "reliaquest.com"
   },
   {
    "company": "Skyrocket",
@@ -100044,6 +100173,14 @@
    "platform": "workday",
    "sector": "finance",
    "country": "multi"
+  },
+  {
+   "company": "Trend Micro",
+   "url": "https://trendmicro.wd3.myworkdayjobs.com/wday/cxs/trendmicro/External/jobs",
+   "platform": "workday",
+   "sector": "security",
+   "country": "JP",
+   "domain": "trendmicro.com"
   },
   {
    "company": "Webfleet Solutions",

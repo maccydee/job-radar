@@ -794,18 +794,18 @@ work this way and are better served elsewhere.
 
 **Fields you cannot select for, because most of the list is still unlabelled.**
 This used to read as a shortage of employers. It is now a shortage of tags. Of
-17,810 sources, **6,089 carry a sector tag and 11,721 carry none**: the harvest
+17,822 sources, **6,140 carry a sector tag and 11,682 carry none**: the harvest
 that took this list from hundreds to thousands read board addresses out of a
 public crawl index, and an address does not say what industry the employer is
-in. The tagged ones are 1,311 healthcare, 1,304 finance, 512 education, 498
-media, 409 energy, 407 retail, 405 technology, 311 construction, 239
-transport, 224 telecoms, 161 public sector, 74 hospitality, 65 charity, 43
-legal, 42 industry, 34 security, 34 professional services and 16 travel.
+in. The tagged ones are 1,310 healthcare, 1,302 finance, 512 education, 498
+media, 409 energy, 407 retail, 405 technology, 311 construction, 238
+transport, 222 telecoms, 161 public sector, 91 security, 74 hospitality, 65
+charity, 43 legal, 42 industry, 34 professional services and 16 travel.
 
 That is less damaging than it sounds, because **a `sectors:` filter keeps every
 untagged source as well as the ones you asked for**. `sectors: [hospitality]`
 does not cut you to seventy-four employers; it drops the sources tagged as
-something else and leaves the 11,721 unlabelled ones in, which is where most
+something else and leaves the 11,682 unlabelled ones in, which is where most
 of any industry actually is. The cost runs the other way: you cannot ask this
 list for "every hospitality employer" and get a true answer, and `job-radar
 coverage` can only report what somebody labelled.
@@ -825,13 +825,52 @@ public-policy hiring actually happens, cannot be read at all.
 
 **`security` is its own sector tag.** Vendors used to be filed under
 `technology`, so `job-radar coverage` had no way to tell a security engineer
-how much of the tagged list applied to them. 34 are tagged `security` now:
-CrowdStrike, Darktrace, SentinelOne, Snyk, Semgrep, Wiz, Okta, Rapid7,
-Proofpoint, Sophos, Qualys, Tenable and Zscaler among them. That was mostly a
-relabelling, not new employers. It is almost entirely product vendors, and
-thin at the MSSP and consultancy end: S-RM is the only one so far. `discover`
-finds these the same way as anywhere else; nobody has pointed it at that end
-of the market yet.
+how much of the tagged list applied to them. 91 are tagged `security` now, up
+from an initial 34 that was mostly a relabelling of names already in the
+list — CrowdStrike, Darktrace, SentinelOne, Snyk, Semgrep, Wiz, Okta, Rapid7,
+Proofpoint, Sophos, Qualys, Tenable and Zscaler among them — and almost
+entirely product vendors: thin at the MSSP and consultancy end (S-RM was the
+only one) and short on anything outside the UK and US.
+
+Three passes closed part of that gap, each doing a different job. The first
+went looking for boards not yet in the list at all and found eight: Coalfire,
+Optiv, Arctic Wolf, Praetorian and Cyderes on the consultancy side, Trend
+Micro (Japan), Group-IB (Singapore) and Cybereason (Israel/US) outside the UK
+and US. The second went the other way, scanning the 17,810 company names
+already in the list for ones that read as security and had been filed under
+`technology`, `finance`, `telecoms` or nothing — 31 of them, Keeper Security,
+Securityscorecard, Obsidian Security, Armis Security, Cato Networks, Eye
+Security (Netherlands), Cybervadis and Obrela Security Industries (a
+Greek/UK MSSP) among them, mislabelled rather than missing. The third went
+back to `discover` with a much longer, deliberately MSSP/consultancy-shaped
+list of names — Trustwave, NCC Group, Kroll, BlueVoyant, eSentire, Deepwatch,
+CyberCX, Redscan and around forty others tried across two sittings — and
+found six more live boards among them: Tevora, BreachLock, Horizon3.ai and
+ReliaQuest (US), ON2IT (Netherlands, zero-trust MSSP) and usd AG (Germany).
+That list ran well under half hits; most of the well-known MSSP and
+consultancy names guessed at do not resolve on the platforms this reads, and
+are reported as such rather than silently dropped.
+
+Every one of the 39 retagged or newly added entries was checked two ways: the
+board URL still answers with a real posting (a plain GET for most platforms,
+a POST with a body for Workday, which is what ReliaQuest needed), and the
+company identity was confirmed against an outside source rather than trusted
+on the strength of matching a regex. That second check is what caught the
+regex's false positives — Siemens (the string `siem` sitting inside a longer
+word), Cyberpuerta (an electronics retailer), Security Finance (a consumer
+lender) and half a dozen physical-guarding and alarm firms whose names happen
+to end in "Security" — and it is also what kept Nuspire out: its board now
+belongs to PDI Technologies, the parent that acquired it, and lists PDI's
+whole hiring pipeline rather than Nuspire's security roles specifically, the
+same reason the Big Four's own boards (Deloitte, PwC, KPMG, EY) and Accenture
+stay under their existing tags instead of `security` despite each running a
+large cyber practice: the board is the whole firm, not the practice.
+
+Still light on continental European MSSPs specifically outside the handful
+above, and a run through Bitdefender, ESET, Orange Cyberdefense, NVISO,
+Wavestone, Devoteam, CyberProof and the like turned up no live board on the
+platforms this reads, which usually means a platform this does not support
+(Taleo, SuccessFactors, a bespoke career site) rather than no board at all.
 
 **Whole sectors on platforms not yet supported.** An early harvest of UK
 employers resolved 34 boards from 196 attempted, and healthcare resolved

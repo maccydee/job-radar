@@ -66,7 +66,7 @@ def test_the_bundled_list_still_holds_the_boards_its_own_meta_claims():
     assert d["meta"]["boards"] == len(_employer_boards()), (
         f"meta.boards says {d['meta']['boards']} but the file holds "
         f"{len(_employer_boards())} employer boards")
-    assert d["meta"]["boards"] == 17807
+    assert d["meta"]["boards"] == 17819
 
 
 def test_no_board_is_named_after_a_url_or_a_bare_hostname():
