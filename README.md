@@ -797,9 +797,9 @@ This used to read as a shortage of employers. It is now a shortage of tags. Of
 17,822 sources, **6,140 carry a sector tag and 11,682 carry none**: the harvest
 that took this list from hundreds to thousands read board addresses out of a
 public crawl index, and an address does not say what industry the employer is
-in. The tagged ones are 1,310 healthcare, 1,302 finance, 512 education, 498
+in. The tagged ones are 1,310 healthcare, 1,303 finance, 512 education, 498
 media, 409 energy, 407 retail, 405 technology, 311 construction, 238
-transport, 222 telecoms, 161 public sector, 91 security, 74 hospitality, 65
+transport, 222 telecoms, 161 public sector, 90 security, 74 hospitality, 65
 charity, 43 legal, 42 industry, 34 professional services and 16 travel.
 
 That is less damaging than it sounds, because **a `sectors:` filter keeps every
@@ -825,7 +825,7 @@ public-policy hiring actually happens, cannot be read at all.
 
 **`security` is its own sector tag.** Vendors used to be filed under
 `technology`, so `job-radar coverage` had no way to tell a security engineer
-how much of the tagged list applied to them. 91 are tagged `security` now, up
+how much of the tagged list applied to them. 90 are tagged `security` now, up
 from an initial 34 that was mostly a relabelling of names already in the
 list — CrowdStrike, Darktrace, SentinelOne, Snyk, Semgrep, Wiz, Okta, Rapid7,
 Proofpoint, Sophos, Qualys, Tenable and Zscaler among them — and almost
@@ -838,10 +838,12 @@ Optiv, Arctic Wolf, Praetorian and Cyderes on the consultancy side, Trend
 Micro (Japan), Group-IB (Singapore) and Cybereason (Israel/US) outside the UK
 and US. The second went the other way, scanning the 17,810 company names
 already in the list for ones that read as security and had been filed under
-`technology`, `finance`, `telecoms` or nothing — 31 of them, Keeper Security,
+`technology`, `finance`, `telecoms` or nothing — 45 of them, Keeper Security,
 Securityscorecard, Obsidian Security, Armis Security, Cato Networks, Eye
 Security (Netherlands), Cybervadis and Obrela Security Industries (a
-Greek/UK MSSP) among them, mislabelled rather than missing. The third went
+Greek/UK MSSP) among them, mislabelled rather than missing. On2It was filed
+under `healthcare` and Eye Security under `finance`; no amount of adding new
+employers would ever have surfaced those. The third went
 back to `discover` with a much longer, deliberately MSSP/consultancy-shaped
 list of names — Trustwave, NCC Group, Kroll, BlueVoyant, eSentire, Deepwatch,
 CyberCX, Redscan and around forty others tried across two sittings — and
@@ -851,7 +853,7 @@ That list ran well under half hits; most of the well-known MSSP and
 consultancy names guessed at do not resolve on the platforms this reads, and
 are reported as such rather than silently dropped.
 
-Every one of the 39 retagged or newly added entries was checked two ways: the
+Every one of the 57 retagged or newly added entries was checked two ways: the
 board URL still answers with a real posting (a plain GET for most platforms,
 a POST with a body for Workday, which is what ReliaQuest needed), and the
 company identity was confirmed against an outside source rather than trusted
@@ -859,12 +861,18 @@ on the strength of matching a regex. That second check is what caught the
 regex's false positives — Siemens (the string `siem` sitting inside a longer
 word), Cyberpuerta (an electronics retailer), Security Finance (a consumer
 lender) and half a dozen physical-guarding and alarm firms whose names happen
-to end in "Security" — and it is also what kept Nuspire out: its board now
-belongs to PDI Technologies, the parent that acquired it, and lists PDI's
-whole hiring pipeline rather than Nuspire's security roles specifically, the
-same reason the Big Four's own boards (Deloitte, PwC, KPMG, EY) and Accenture
-stay under their existing tags instead of `security` despite each running a
-large cyber practice: the board is the whole firm, not the practice.
+to end in "Security".
+
+The harder exclusions are the ones where the company really does do security
+and the *board* still does not qualify. Nuspire's board now belongs to PDI
+Technologies, the parent that acquired it, and lists PDI's whole hiring
+pipeline. CyberMedia Technologies is a federal IT modernisation contractor
+whose board advertises acquisition specialists and budget analysts alongside
+its cyber work. Both stay under their existing tags, for the same reason the
+Big Four (Deloitte, PwC, KPMG, EY) and Accenture do despite each running a
+large cyber practice: the board has to be the practice, not merely contain
+it. A tag that catches every employer with a security team is a tag that
+means nothing to the person filtering on it.
 
 Still light on continental European MSSPs specifically outside the handful
 above, and a run through Bitdefender, ESET, Orange Cyberdefense, NVISO,
