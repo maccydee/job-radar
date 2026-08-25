@@ -602,8 +602,14 @@ def test_setup_refuses_a_non_terminal_instead_of_asking_forever():
     from jobradar import setup_wizard
 
     out = io.StringIO()
-    with contextlib.redirect_stdout(out):
-        rc = setup_wizard.run(Path("config.yaml"))
+    # The guard this exercises is `sys.stdin.isatty()`, and that is exactly
+    # the thing that is not stable across test runners: a real terminal, a
+    # CI runner and a sandboxed shell each answer it differently, so pinning
+    # it here is what makes the test assert the same thing everywhere rather
+    # than passing or failing depending on who calls it.
+    with mock.patch.object(sys.stdin, "isatty", return_value=False):
+        with contextlib.redirect_stdout(out):
+            rc = setup_wizard.run(Path("config.yaml"))
     assert rc == 1
     assert len(out.getvalue()) < 2000, "should be a sentence, not a torrent"
     assert "needs a terminal" in out.getvalue()
