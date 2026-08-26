@@ -572,13 +572,56 @@ def fetch_one(
                           f"requires. The board was never reached, so this is "
                           f"not evidence it is gone.",
                     status=None, transport=alert, elapsed=time.time() - t0)
+            # The class name on its own cannot be acted on. DNS failure,
+            # connection refused, connection reset and a handshake aborted
+            # mid-stream are all `ConnectionError`, and `validate` prints
+            # this string once per source: a run reporting seven thousand of
+            # them said nothing about whether the boards were gone or the
+            # network had blinked. urllib3 puts the reason in the innermost
+            # cause, so carry that up with it.
             last = type(e).__name__
+            why = _root_cause(e)
+            if why:
+                last = f"{last}: {why}"
             if attempt < retries:
                 _sleep_backoff(attempt, None)
                 continue
 
     return Result(src, error=last, status=status, elapsed=time.time() - t0)
 
+
+
+def _root_cause(e: BaseException, limit: int = 120) -> str:
+    """The innermost explanation in a requests or urllib3 exception chain.
+
+    `str(ConnectionError)` is a nest of repr'd pool and socket objects with
+    the one useful phrase buried in the middle of it, so walk to the
+    innermost cause and keep that. Trimmed, because this ends up on a report
+    line next to a company name.
+    """
+    cur, seen = e, {id(e)}
+    while True:
+        nxt = getattr(cur, "reason", None) or cur.__cause__ or cur.__context__
+        if nxt is None or id(nxt) in seen:
+            break
+        seen.add(id(nxt))
+        cur = nxt
+    text = " ".join(str(cur).split())
+    # Whether the chain was walked or the whole thing arrived as one string,
+    # the useful phrase sits at the END of it, after the last "Caused by".
+    # Trimming from the left would keep "HTTPSConnectionPool(host=..., port=
+    # 443): Max retries exceeded" -- which is true of every failure and tells
+    # nobody anything -- and cut off the reason.
+    if "Caused by" in text:
+        text = text.split("Caused by", 1)[1].strip()
+    # urllib3 prefixes NewConnectionError with the repr of the connection
+    # object, which names a memory address and nothing a reader can use.
+    text = re.sub(r"^\w+\(\s*", "", text)
+    text = re.sub(r"^['\"]?<[^>]+>:\s*", "", text)
+    text = text.strip("'\")( ")
+    if not text or text == type(e).__name__:
+        return ""
+    return text if len(text) <= limit else text[: limit - 1] + "\u2026"
 
 def fetch_workday(
     src: Source,

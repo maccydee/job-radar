@@ -316,6 +316,14 @@ def first_scan(config_path: Path) -> int:
         docs = None
         limit = 0
         dry_run = False
+        # Every attribute `cmd_scan` reads has to be set here, because this
+        # namespace is built by hand rather than by argparse. `--no-enrich`
+        # was added to the parser and not to this class, so the first scan a
+        # new user ran raised AttributeError after every board had been
+        # fetched and before a single row was written. tests/
+        # test_three_silent_faults.py compares the two lists so the next flag
+        # added fails there instead of in a stranger's first run.
+        no_enrich = False
 
     try:
         rc = cli.cmd_scan(_Args())

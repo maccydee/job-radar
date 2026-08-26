@@ -229,12 +229,74 @@ def _wants(cfg) -> str:
     return "\n".join(bits)
 
 
+def _pdf_to_text(p: Path) -> str:
+    """A PDF's text, if this machine has something that can extract it.
+
+    No new dependency is added for this. The tool installs on `requests` and
+    `PyYAML` and nothing else, and a CV is read once per run, so an optional
+    import that fails into a clear message is a better trade than a parser
+    of our own for a container format.
+    """
+    try:
+        from pypdf import PdfReader                        # noqa: PLC0415
+    except ImportError:
+        return ""
+    try:
+        reader = PdfReader(str(p))
+        return "\n".join((page.extract_text() or "") for page in reader.pages)
+    except Exception:
+        # An encrypted or malformed PDF is not a crash worth taking here;
+        # the caller refuses with a message either way.
+        return ""
+
+
+def _is_readable_text(text: str) -> bool:
+    """Whether this is somebody's CV rather than the bytes of a file format.
+
+    A NUL settles it on its own: `subprocess` refuses to exec an argument
+    containing one, so a prompt built from this dies before the model sees
+    it. Past that, the test is what share of the characters are the letters,
+    spaces and punctuation a CV is made of. A Flate-compressed PDF stream
+    read as UTF-8 scores far below this; text with accents, symbols and box
+    drawing in it scores far above.
+    """
+    if "\x00" in text:
+        return False
+    sample = text[:4000]
+    if not sample.strip():
+        return False
+    ok = sum(ch.isalnum() or ch.isspace() or ch in ",.;:'\"()[]{}/\\-–—&@+#%*!?|"
+             for ch in sample)
+    return ok / len(sample) >= 0.85
+
+
 def _cv_text(cfg) -> str:
     from .runner import docx_to_text
     p = Path(cfg.cv_path).expanduser()
     if not p.exists():
         raise SystemExit(f"No CV at {p}. Set cv.path in your config.")
-    text = docx_to_text(p) if p.suffix.lower() == ".docx" else p.read_text(encoding="utf-8", errors="ignore")
+    suffix = p.suffix.lower()
+    if suffix == ".docx":
+        text = docx_to_text(p)
+    elif suffix == ".pdf":
+        # Read as UTF-8 with errors ignored -- which is what everything that
+        # is not a .docx used to get -- a PDF yields thousands of characters
+        # of `%PDF-1.4`, `/FlateDecode` and stream bytes. That cleared the
+        # length guard below, so the file structure of the CV was sent to the
+        # model as the document every score was judged against, and the only
+        # reason anybody found out is that one NUL byte in it made
+        # `subprocess` refuse to launch.
+        text = _pdf_to_text(p)
+        if not _is_readable_text(text) or len(text.strip()) < 200:
+            raise SystemExit(
+                f"{p} is a PDF and its text could not be extracted.\n"
+                f"Scoring against a PDF's file structure would give you "
+                f"numbers with nothing behind them, so this stops here.\n"
+                f"Either install an extractor (`pip install pypdf`) and run "
+                f"this again, or point cv.path at a .docx or a .txt export "
+                f"of the same CV.")
+    else:
+        text = p.read_text(encoding="utf-8", errors="ignore")
     # `docx_to_text` returns "" on anything it cannot open, including a
     # permission error, so a file that exists is not proof of a CV that can be
     # read. Ranking against an empty CV would still produce a full set of
@@ -245,6 +307,18 @@ def _cv_text(cfg) -> str:
             f"characters). Scoring against an empty CV would give you numbers "
             f"with nothing behind them. Check the file opens, and that this "
             f"process can read it.")
+    # Length was never the right question on its own. Any binary file read
+    # with `errors="ignore"` clears the count above while containing none of
+    # the candidate's career: `.doc`, `.rtf`, `.odt` and `.pages` all reach
+    # this line, and a PDF did until the branch above existed. Ask whether
+    # what came back is text.
+    if not _is_readable_text(text):
+        raise SystemExit(
+            f"{p} does not read as text ({p.suffix or 'no extension'}), so "
+            f"what came out of it is the file's own structure rather than "
+            f"your CV.\nScoring against that would give you numbers with "
+            f"nothing behind them.\nExport the same CV as .docx or .txt and "
+            f"point cv.path at that.")
     # The CV is the constant in every batch, so its length is multiplied by the
     # number of calls. Six thousand characters is a full two-page CV.
     return " ".join(text.split())[:6000]
