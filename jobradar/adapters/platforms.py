@@ -3053,6 +3053,13 @@ def parse_adzuna(payload: Any, src: Source) -> Iterator[Job]:
         # ever see it, which is how a six month contract clears a permanent
         # salary floor. Say which kind of job it is on the row rather than
         # trying to undo the arithmetic.
+        # Both, and they must agree. This field was read into `flags` as
+        # display text for months while `job.employment`, which is what the
+        # dashboard facets and filters on, was set independently from the
+        # prose. A row could carry "contract, not permanent" in its flags and
+        # `employment: unstated` at the same time, with nothing anywhere
+        # asserting the two should match.
+        job.employment = from_platform(j.get("contract_type"))
         if str(j.get("contract_type") or "").lower() == "contract":
             job.flags.append("contract, not permanent")
         if str(j.get("contract_time") or "").lower() == "part_time":

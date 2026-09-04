@@ -415,6 +415,39 @@ class AdaptersReadTheField(unittest.TestCase):
         job = list(platforms.parse_personio(xml, src))[0]
         self.assertEqual(job.employment, C)
 
+    def test_adzuna_sets_the_field_and_not_only_the_flag(self):
+        # `parse_adzuna` has read `contract_type` for months and put it in
+        # `flags` as display text, while `employment` was set from the prose.
+        # A row could say "contract, not permanent" in one place and
+        # "unstated" in the other, and nothing asserted they agree.
+        from jobradar.adapters import platforms
+        from jobradar.models import Source
+        src = Source(company="Adzuna", url="https://api.adzuna.com/v1/api/jobs/"
+                     "gb/search/1", platform="adzuna", country="UK")
+        payload = {"results": [{"id": "1", "title": "Engineering Manager",
+                                "redirect_url": "https://adzuna.co.uk/j/1",
+                                "description": "Lead a team.",
+                                "contract_type": "contract",
+                                "location": {"display_name": "London, UK"},
+                                "created": "2026-09-01T00:00:00Z"}]}
+        job = list(platforms.parse_adzuna(payload, src))[0]
+        self.assertEqual(job.employment, C)
+        self.assertTrue([f for f in job.flags if "contract" in f])
+
+    def test_adzuna_permanent_is_carried_too(self):
+        from jobradar.adapters import platforms
+        from jobradar.models import Source
+        src = Source(company="Adzuna", url="https://api.adzuna.com/v1/api/jobs/"
+                     "gb/search/1", platform="adzuna", country="UK")
+        payload = {"results": [{"id": "2", "title": "Engineering Manager",
+                                "redirect_url": "https://adzuna.co.uk/j/2",
+                                "description": "Lead a team.",
+                                "contract_type": "permanent",
+                                "location": {"display_name": "London, UK"},
+                                "created": "2026-09-01T00:00:00Z"}]}
+        job = list(platforms.parse_adzuna(payload, src))[0]
+        self.assertEqual(job.employment, P)
+
     def test_every_platform_with_the_field_actually_calls_the_mapper(self):
         # A row count would have passed while the column stayed empty, which
         # is this repo's signature failure. Assert the call site exists for
