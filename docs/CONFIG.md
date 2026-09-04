@@ -67,11 +67,11 @@ absent.
 ## sectors
 
 Which employers to watch. Empty means all of them. These are the tags that
-actually exist in the bundled list, out of 17,817 sources:
+actually exist in the bundled list, out of 17,815 sources:
 
 | sector | sources |
 |---|---|
-| `untagged` | 11,724 |
+| `untagged` | 11,722 |
 | `healthcare` | 1,311 |
 | `finance` | 1,304 |
 | `education` | 512 |
@@ -100,7 +100,7 @@ municipal and non-profit employers as often as UK public bodies).
 
 Setting `sectors` **keeps every untagged source as well** as the ones tagged
 with what you asked for. So it removes the labelled sources you did not ask
-for and leaves the other 11,724 in place, which is why it narrows the list far
+for and leaves the other 11,722 in place, which is why it narrows the list far
 less than the numbers above suggest. A tag that is not in this table is
 refused at load rather than quietly matching nothing. Check yours with
 `job-radar coverage`, which counts the file rather than this table.
@@ -110,7 +110,7 @@ refused at load rather than quietly matching nothing. Check yours with
 | key | type | notes |
 |---|---|---|
 | `use_bundled` | true / false | |
-| `countries` | list of codes | Only drops a source whose country tag names somewhere else, which is 10,067 of the 17,817. The other 7,750 are fetched whatever you set: 5,215 carry no tag, and 1,597 are tagged `multi`, meaning the board belongs to a multinational rather than to one country. Neither is evidence the employer has nothing where you are, and a multinational is one of the likelier places to find a vacancy in your country, so both are kept. `[UK]` therefore leaves 7,750 sources rather than the 938 tagged `UK`. This trims what gets fetched; `locations.countries` is what decides where a role is. |
+| `countries` | list of codes | Only drops a source whose country tag names somewhere else, which is 10,069 of the 17,815. The other 7,748 are fetched whatever you set: 5,215 carry no tag, and 1,597 are tagged `multi`, meaning the board belongs to a multinational rather than to one country. Neither is evidence the employer has nothing where you are, and a multinational is one of the likelier places to find a vacancy in your country, so both are kept. `[UK]` therefore leaves 7,748 sources rather than the 936 tagged `UK`. This trims what gets fetched; `locations.countries` is what decides where a role is. |
 | `extra` | list | Either a bare URL string, or `{company, url, platform}`. `job-radar discover <name> --add` writes these for you. |
 | `reed_api_key` | string | Free key from <https://www.reed.co.uk/developers/jobseeker>, needed only if you add the Reed source. Falls back to the `REED_API_KEY` environment variable when blank, which is the route for GitHub Actions. **Put a real key in `config.local.yaml`, never in `config.yaml`**: the second one is the file a fork force-adds for GitHub Actions, so it is the one that ends up committed. Blank means the Reed source is skipped, with a message naming it. |
 | `adzuna_app_id`, `adzuna_app_key` | string | Free pair from <https://developer.adzuna.com/signup>, needed only if you add the Adzuna source. Both fall back to `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` in the environment when blank, which is the route for GitHub Actions. **Real values go in `config.local.yaml`, never in `config.yaml`**, which is the file a fork force-adds for GitHub Actions. Either one missing means no credentials, and the Adzuna source is skipped with a message naming it. Adzuna's free limits are 25 calls a minute, 250 a day, 1,000 a week and 2,500 a month; one scan is one call per job title per page. |

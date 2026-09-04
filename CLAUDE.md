@@ -183,8 +183,8 @@ while none of them was true. Derive it, or leave it in the run's own output.
 `meta.boards` in `sources/sources.json` is computed by `sources.save()` for
 exactly this reason.
 
-Current, if you need them for a comment: 17,811 employer boards, 17,817
-entries, 5 keyword templates, 24 board platforms in the data, 32 adapters
+Current, if you need them for a comment: 17,811 employer boards, 17,815
+entries, 3 keyword templates, 24 board platforms in the data, 32 adapters
 written.
 
 ## Style

@@ -62613,20 +62613,6 @@
    "keyword_template": true
   },
   {
-   "company": "LinkedIn contract",
-   "url": "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={keyword}&location=United%20Kingdom&f_JT=C&f_TPR=r604800&start=0",
-   "platform": "linkedin",
-   "country": "UK",
-   "keyword_template": true
-  },
-  {
-   "company": "LinkedIn temporary",
-   "url": "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={keyword}&location=United%20Kingdom&f_JT=T&f_TPR=r604800&start=0",
-   "platform": "linkedin",
-   "country": "UK",
-   "keyword_template": true
-  },
-  {
    "company": "NHS Jobs",
    "url": "https://www.jobs.nhs.uk/candidate/search/results?keyword={keyword}",
    "platform": "nhs",

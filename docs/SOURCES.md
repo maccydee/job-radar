@@ -229,7 +229,7 @@ one live snapshot held **five** engineering-leadership titles across roughly
 
 **Fields you cannot select for, because most of the list is still unlabelled.**
 This used to read as a shortage of employers. It is now a shortage of tags. Of
-17,817 sources, **6,093 carry a sector tag and 11,724 carry none**: the harvest
+17,815 sources, **6,093 carry a sector tag and 11,722 carry none**: the harvest
 that took this list from hundreds to thousands read board addresses out of a
 public crawl index, and an address does not say what industry the employer is
 in. The tagged ones are 1,311 healthcare, 1,304 finance, 512 education, 498
@@ -240,7 +240,7 @@ legal, 42 industry, 34 security, 34 professional services and 16 travel.
 That is less damaging than it sounds, because **a `sectors:` filter keeps every
 untagged source as well as the ones you asked for**. `sectors: [hospitality]`
 does not cut you to seventy-four employers; it drops the sources tagged as
-something else and leaves the 11,724 unlabelled ones in, which is where most
+something else and leaves the 11,722 unlabelled ones in, which is where most
 of any industry actually is. The cost runs the other way: you cannot ask this
 list for "every hospitality employer" and get a true answer, and `job-radar
 coverage` can only report what somebody labelled.

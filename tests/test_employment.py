@@ -598,28 +598,59 @@ class Dashboard(unittest.TestCase):
             self.assertIn(value, interactive._EMP_LABELS)
 
 
-class BundledContractSources(unittest.TestCase):
-    def test_the_source_list_carries_a_contract_scoped_search(self):
-        import json
-        rows = json.loads(
-            (Path(__file__).parent.parent / "sources" / "sources.json")
-            .read_text(encoding="utf-8"))["sources"]
-        li = [r for r in rows if r.get("platform") == "linkedin"]
-        self.assertTrue([r for r in li if "f_JT=C" in r["url"]],
-                        "no contract-scoped LinkedIn search in the source list")
+class LinkedInJobTypeFilterIsNotTrusted(unittest.TestCase):
+    """A filter that changes the answer without filtering.
 
-    def test_the_contract_searches_are_keyword_templates(self):
-        # Scoped by job type, filled with the reader's OWN titles. A source
-        # carrying somebody else's search terms is that person's search saved
-        # as an employer list.
+    Two sources were added on 4 September 2026 scoping the LinkedIn guest
+    endpoint to the job types LinkedIn itself marks contract and temporary,
+    by appending `f_JT=C` and `f_JT=T`. Both were removed the same day, after
+    measuring what they actually return for "engineering manager" in the UK:
+
+      * `f_JT=T` returned the identical ten postings as the unfiltered
+        search, in the same order, with the same ids. The parameter did
+        nothing at all.
+      * `f_JT=C` returned a DIFFERENT ten, which looks like the filter
+        working, and is worse. Fetching the first three postings and reading
+        the `employmentType` off each page gave FULL_TIME every time. It
+        changes the result set without selecting contract work.
+
+    That second one is this repo's signature failure exactly: it returns real
+    jobs, so a scan reports success, a `validate` pass sees a live board, and
+    the roles land on the dashboard where the classifier reads them as
+    permanent or unstated. Nothing anywhere would have said the source was
+    not doing what its name claims.
+
+    The lesson generalises past LinkedIn, which is why this test guards the
+    shape rather than the two URLs: a source whose URL asserts a filter has
+    to have had that filter's OUTPUT checked, not just its status code.
+    """
+
+    def _sources(self):
         import json
-        rows = json.loads(
+        return json.loads(
             (Path(__file__).parent.parent / "sources" / "sources.json")
             .read_text(encoding="utf-8"))["sources"]
-        for r in rows:
-            if r.get("platform") == "linkedin" and "f_JT=" in r["url"]:
-                self.assertTrue(r.get("keyword_template"), r["company"])
-                self.assertIn("{keyword}", r["url"])
+
+    def test_no_linkedin_source_claims_a_job_type_filter(self):
+        for r in self._sources():
+            if r.get("platform") != "linkedin":
+                continue
+            self.assertNotIn(
+                "f_JT=", r["url"],
+                f"{r['company']} scopes the LinkedIn guest endpoint by job "
+                f"type. Measured 4 Sept 2026: f_JT=T is ignored entirely and "
+                f"f_JT=C returns a different set of FULL_TIME roles. Verify "
+                f"the postings it returns really carry that type before "
+                f"re-adding it.")
+
+    def test_the_unscoped_linkedin_search_is_still_there(self):
+        # Removing the two scoped ones must not have taken the working one
+        # with them.
+        li = [r for r in self._sources() if r.get("platform") == "linkedin"]
+        self.assertTrue(li, "the LinkedIn keyword search has gone entirely")
+        for r in li:
+            self.assertTrue(r.get("keyword_template"))
+            self.assertIn("{keyword}", r["url"])
 
 
 if __name__ == "__main__":
