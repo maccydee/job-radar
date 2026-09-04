@@ -1377,14 +1377,39 @@ def enrich(job: Job) -> Job:
     rights = work_rights(job)
     if rights and rights not in job.flags:
         job.flags.append(rights)
-    # Permanent, contract, or the advert did not say. Read here rather than in
-    # an adapter because it needs the description, which several platforms
-    # only supply after `enrich` has fetched the posting itself.
+    # Permanent, contract, or the advert did not say.
+    #
+    # The employer's own answer wins. Six platforms carry an explicit
+    # employment-type field, covering 7,927 of the 17,811 bundled boards, and
+    # the adapters set `job.employment` from it. A structured field the
+    # employer filled in beats a regex over their prose every time, and the
+    # regex only runs where they left it blank.
+    #
+    # Read here rather than only in an adapter because the text half needs the
+    # description, which LinkedIn, Workday and SmartRecruiters supply only
+    # after `enrich` has fetched the posting itself.
     #
     # It never drops a role. Employment type is a fact about the job that the
     # reader decides what to do with, and a filter that hid contract work
     # would hide the roles this was built to surface.
-    job.employment, _ev = employment.classify(job.title, job.description)
+    # The order of the three, which is not obvious and is the whole of the
+    # judgement here:
+    #
+    #  1. A title that says contract outright. "Interim Head of Engineering"
+    #     and "Engineering Manager (12 Month FTC)" are deliberate acts of
+    #     writing, while the structured field next to them is a dropdown with
+    #     a default, and an employer who leaves the default alone while
+    #     titling the role "Interim" has told you which one they meant.
+    #  2. The platform's own field, where they filled it in.
+    #  3. The text, for the 9,884 boards whose platform has no such field.
+    _stated = job.employment or employment.UNSTATED
+    _title, _ev = employment.classify(job.title)
+    if _title == employment.CONTRACT:
+        job.employment = employment.CONTRACT
+    elif _stated != employment.UNSTATED:
+        job.employment, _ev = _stated, "stated by the employer"
+    else:
+        job.employment, _ev = employment.classify(job.title, job.description)
     _f = employment.flag(job.employment, _ev)
     if _f and _f not in job.flags:
         job.flags.append(_f)

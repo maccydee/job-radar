@@ -239,3 +239,112 @@ def flag(value: str, evidence: str) -> str:
     if value != CONTRACT:
         return ""
     return f"contract or interim ({evidence})" if evidence else "contract or interim"
+
+
+# ---------------------------------------------------------------------------
+# What the employer said, in the platform's own field.
+#
+# Six of the platforms in the bundled list carry an explicit employment-type
+# field and nothing read any of them, so 7,927 of 17,811 boards had the answer
+# sitting in the payload while this module guessed at it from prose. Measured
+# on 4 September 2026 by fetching one live board per platform:
+#
+#   ashby            employmentType          2,607 boards   FullTime
+#   workable         employment_type         2,094 boards   Contract, Full-time
+#   personio         employmentType          1,258 boards   permanent, intern
+#   recruitee        employment_type_code      993 boards   fulltime_permanent
+#   smartrecruiters  typeOfEmployment          910 boards   permanent, intern
+#   lever            categories.commitment      65 boards   Full time, Part time
+#
+# The first Workable board tried had 22 postings and 10 of them were typed
+# "Contract". Every one was stored as `unstated`.
+#
+# THE TRAP, and it is the reason this is a table rather than a one-liner:
+# these fields answer two different questions with one value. "Full-time" is a
+# SCHEDULE. A six month contract can be full time, and on the platforms whose
+# vocabulary mixes the two there is no way to tell a full-time permanent role
+# from a full-time contract that was typed by its hours. So a schedule word
+# resolves to `unstated`, not to `permanent`.
+#
+# That is deliberately lossy in the safe direction. A missed `permanent` costs
+# nothing, because `unstated` is shown to everybody and permanent is the label
+# nobody is hunting for. A wrong `permanent` on a contract role hides it from
+# the one reader who wanted it, and hidden is indistinguishable from absent.
+# ---------------------------------------------------------------------------
+_PLATFORM_VALUES = {
+    # Said outright. Nothing here has a second reading.
+    "contract": CONTRACT,
+    "contractor": CONTRACT,
+    "temporary": CONTRACT,
+    "temp": CONTRACT,
+    "freelance": CONTRACT,
+    "fixed_term": CONTRACT,
+    "fixedterm": CONTRACT,
+    "fixed_term_contract": CONTRACT,
+    "interim": CONTRACT,
+    "seasonal": CONTRACT,
+    "contract_to_hire": CONTRACT,
+
+    "permanent": PERMANENT,
+    "fulltime_permanent": PERMANENT,
+    "parttime_permanent": PERMANENT,
+    "regular": PERMANENT,
+
+    # Schedules, not contract types. See the paragraph above: these are the
+    # values that must NOT become `permanent`.
+    "fulltime": UNSTATED,
+    "full_time": UNSTATED,
+    "parttime": UNSTATED,
+    "part_time": UNSTATED,
+
+    # Real fixed terms, and still not what somebody hunting contract work
+    # means. Putting an internship in the contract facet would fill it with
+    # roles nobody searching it wants, which is its own kind of wrong answer.
+    "intern": UNSTATED,
+    "internship": UNSTATED,
+    "trainee": UNSTATED,
+    "apprentice": UNSTATED,
+    "apprenticeship": UNSTATED,
+    "working_student": UNSTATED,
+    "volunteer": UNSTATED,
+    "other": UNSTATED,
+}
+
+# Lever's `commitment` is free text an employer types, so it arrives as
+# "Full time days" and "Full time, Part time, and Weekend shifts available."
+# as well as the tidy values. Substring, not equality, and contract wins on a
+# tie because a field mentioning contract at all is the employer raising it.
+_PLATFORM_SUBSTRINGS = (
+    ("fixed term", CONTRACT), ("fixed-term", CONTRACT),
+    ("contract", CONTRACT), ("freelance", CONTRACT),
+    ("temporary", CONTRACT), ("interim", CONTRACT),
+    ("permanent", PERMANENT),
+)
+
+
+def from_platform(value) -> str:
+    """The employer's own employment-type value, normalised.
+
+    Returns `unstated` for anything unrecognised, which is the honest answer
+    for a vocabulary this table has not seen: a platform that adds a value
+    must not have it silently read as one of the two that matter.
+    """
+    if isinstance(value, dict):
+        # SmartRecruiters sends {"id": "permanent", "label": "Full-time"}.
+        # The id is the machine value and the label is display text that has
+        # already been through a translation table, so the id is what to read.
+        value = value.get("id") or value.get("label") or ""
+    if not isinstance(value, str):
+        return UNSTATED
+    # "FullTime" (Ashby) and "Full-time" (Workable) and "full time" (Lever)
+    # and "fulltime_permanent" (Recruitee) are four spellings of two words.
+    # Split the camel case first, then flatten every separator to one.
+    spaced = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", value.strip())
+    key = re.sub(r"[\s\-_]+", "_", spaced.lower())
+    if key in _PLATFORM_VALUES:
+        return _PLATFORM_VALUES[key]
+    low = value.lower()
+    for needle, verdict in _PLATFORM_SUBSTRINGS:
+        if needle in low:
+            return verdict
+    return UNSTATED

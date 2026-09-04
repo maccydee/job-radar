@@ -18,6 +18,7 @@ from typing import Any, Iterator
 from urllib.parse import unquote, urljoin, urlparse
 
 from ..models import Job, Salary, Source
+from ..employment import from_platform
 from ..salary import (from_adzuna, from_ashby, from_greenhouse, from_pinpoint,
                        from_reed, parse_text)
 
@@ -198,6 +199,10 @@ def parse_ashby(payload: Any, src: Source) -> Iterator[Job]:
             posted_at=_iso(j.get("publishedAt")),
             description=_text(j.get("descriptionPlain") or j.get("descriptionHtml")),
             salary=from_ashby(j.get("compensation")),
+            # The employer's own answer, not a guess at their prose. See
+            # `employment.from_platform` for what the values mean and why
+            # "FullTime" is not read as permanent.
+            employment=from_platform(j.get("employmentType")),
             source_id=src.key,
         )
 
@@ -226,6 +231,9 @@ def parse_lever(payload: Any, src: Source) -> Iterator[Job]:
             posted_at=_iso(j.get("createdAt")),
             description=(desc + " " + extra).strip(),
             salary=parse_text(f"{desc[:1500]} {extra[:500]}"),
+            # Free text an employer types, so "Full time days" and "Full time,
+            # Part time, and Weekend shifts available." both turn up here.
+            employment=from_platform(cats.get("commitment")),
             source_id=src.key,
         )
 
@@ -285,6 +293,12 @@ def parse_workable(payload: Any, src: Source) -> Iterator[Job]:
             posted_at=_iso(j.get("published_on") or j.get("created_at")),
             description=desc,
             salary=parse_text(desc[:1500]),
+            # Two spellings, because the widget endpoint and the account
+            # endpoint disagree. The first live board checked had 22 postings
+            # and 10 of them typed "Contract", every one of which this tool
+            # had been storing as "unstated".
+            employment=from_platform(j.get("employment_type")
+                                     or j.get("employmentType")),
             source_id=src.key,
         )
 
@@ -518,6 +532,10 @@ def parse_smartrecruiters(payload: Any, src: Source) -> Iterator[Job]:
             posted_at=_iso(j.get("releasedDate") or j.get("createdOn")),
             description=_text(j.get("jobAd")),
             salary=Salary(),
+            # `{"id": "permanent", "label": "Full-time"}`. The id is the
+            # machine value; the label is display text that has already been
+            # through a translation table, so the id is what to read.
+            employment=from_platform(j.get("typeOfEmployment")),
             source_id=src.key,
         )
 
@@ -699,6 +717,9 @@ def parse_recruitee(payload: Any, src: Source) -> Iterator[Job]:
             posted_at=_iso(j.get("published_at") or j.get("created_at")),
             description=desc.strip(),
             salary=parse_text(desc[:1500]),
+            # "fulltime_permanent", "contract", "freelance", "internship".
+            employment=from_platform(j.get("employment_type_code")
+                                     or j.get("employment_type")),
             source_id=src.key,
         )
 
@@ -1633,6 +1654,11 @@ def parse_personio(payload: Any, src: Source) -> Iterator[Job]:
             posted_at=_iso(g("createdAt")),
             description=desc,
             salary=parse_text(desc[:1500]),
+            # Personio states this outright: "permanent", "intern",
+            # "trainee", "freelance", "working_student". Note that its
+            # `schedule` tag is the OTHER question (full-time, part-time) and
+            # is deliberately not read here.
+            employment=from_platform(g("employmentType")),
             source_id=src.key,
         )
 

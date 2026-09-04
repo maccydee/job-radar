@@ -270,6 +270,174 @@ class TheTitleOutranksTheDescription(unittest.TestCase):
               "This is a permanent position within a growing team."), C)
 
 
+class WhatThePlatformSaid(unittest.TestCase):
+    """Six platforms answer this outright and nothing read any of them.
+
+    Measured on 4 September 2026 by fetching one live board per platform:
+    ashby 2,607 boards, workable 2,094, personio 1,258, recruitee 993,
+    smartrecruiters 910, lever 65. That is 7,927 of 17,811 boards where the
+    employer filled the field in and this tool guessed from prose instead.
+    The first Workable board tried had 22 postings and 10 were typed
+    "Contract"; every one was stored as "unstated".
+    """
+
+    def test_the_values_that_mean_contract(self):
+        for v in ("Contract", "contract", "Temporary", "freelance",
+                  "Fixed Term Contract", "FIXED_TERM", "contractor",
+                  "contract_to_hire", "seasonal", "interim"):
+            self.assertEqual(employment.from_platform(v), C, v)
+
+    def test_the_values_that_mean_permanent(self):
+        for v in ("permanent", "Permanent", "fulltime_permanent",
+                  "parttime_permanent", "regular"):
+            self.assertEqual(employment.from_platform(v), P, v)
+
+    def test_a_schedule_is_not_a_contract_type(self):
+        # THE trap in this table. "Full-time" answers a different question,
+        # and a six month contract can be full time. Reading it as permanent
+        # would hide contract roles behind a label asserting the opposite.
+        for v in ("Full-time", "FullTime", "full time", "Part-time",
+                  "PartTime", "Full time days",
+                  "Full time, Part time, and Weekend shifts available."):
+            self.assertEqual(employment.from_platform(v), U, v)
+
+    def test_an_internship_is_not_what_a_contract_hunter_means(self):
+        # Genuinely fixed-term, and putting it in the contract facet would
+        # fill that facet with roles nobody searching it wants.
+        for v in ("intern", "Intern", "internship", "trainee", "apprentice",
+                  "working_student"):
+            self.assertEqual(employment.from_platform(v), U, v)
+
+    def test_smartrecruiters_sends_a_dict_and_the_id_is_the_machine_value(self):
+        # The label has been through a translation table; the id has not.
+        self.assertEqual(
+            employment.from_platform({"id": "permanent", "label": "Full-time"}), P)
+        self.assertEqual(
+            employment.from_platform({"id": "contractor", "label": "Contractor"}), C)
+
+    def test_the_four_spellings_of_two_words_agree(self):
+        # Ashby "FullTime", Workable "Full-time", Lever "Full time",
+        # Recruitee "fulltime_permanent". Same field, four vocabularies.
+        self.assertEqual(employment.from_platform("FullTime"),
+                         employment.from_platform("Full-time"))
+        self.assertEqual(employment.from_platform("Full-time"),
+                         employment.from_platform("full time"))
+
+    def test_an_unknown_value_is_unstated_not_a_guess(self):
+        # A platform that adds a value must not have it silently read as one
+        # of the two that matter.
+        for v in (None, "", "Nonsense", 7, [], {"label": "?"}):
+            self.assertEqual(employment.from_platform(v), U, repr(v))
+
+
+class WhoWinsWhenTheyDisagree(unittest.TestCase):
+    """Title, then the platform's field, then the prose."""
+
+    def _j(self, title, desc="", stated=U):
+        j = Job(company="X", title=title, url="https://e.invalid/" + title[:8],
+                platform="workable", location="London, UK", description=desc,
+                employment=stated)
+        enrich(j)
+        return j.employment
+
+    def test_the_platform_field_beats_silent_prose(self):
+        self.assertEqual(self._j("Engineering Manager", "Lead a team.",
+                                 stated=C), C)
+
+    def test_a_contract_title_beats_a_permanent_platform_field(self):
+        # An employer who leaves the dropdown on its default while titling
+        # the role "Interim Head of Engineering" has told you which they
+        # meant. The title is the deliberate act.
+        self.assertEqual(self._j("Interim Head of Engineering", "x", stated=P), C)
+        self.assertEqual(self._j("Engineering Manager (12 Month FTC)", "x",
+                                 stated=P), C)
+
+    def test_the_prose_runs_only_where_the_platform_said_nothing(self):
+        self.assertEqual(self._j("Engineering Manager",
+                                 "This is a permanent position."), P)
+        self.assertEqual(self._j("Engineering Manager",
+                                 "Contract Type: Fixed Term Contract"), C)
+
+    def test_nothing_anywhere_is_still_unstated(self):
+        self.assertEqual(self._j("Engineering Manager", "Lead a team."), U)
+
+    def test_a_platform_value_is_flagged_as_the_employers_own_words(self):
+        j = Job(company="X", title="Engineering Manager", url="https://e.invalid/z",
+                platform="workable", location="London, UK",
+                description="Lead a team.", employment=C)
+        enrich(j)
+        self.assertTrue([f for f in j.flags if "stated by the employer" in f])
+
+
+class AdaptersReadTheField(unittest.TestCase):
+    """The bug was not the mapping, it was that nobody called it."""
+
+    def _fixture(self, name):
+        import json
+        return json.loads(
+            (Path(__file__).parent / "fixtures" / name).read_text(encoding="utf-8"))
+
+    def test_workable_reads_employment_type(self):
+        from jobradar.adapters import platforms
+        from jobradar.models import Source
+        src = Source(company="Acme", url="https://apply.workable.com/api/v1/"
+                     "widget/accounts/acme", platform="workable", country="UK")
+        jobs = list(platforms.parse_workable(self._fixture("workable_company.json"), src))
+        self.assertTrue(jobs)
+        # The fixture carries Full-time and Part-time, both of which are
+        # schedules, so every row is unstated rather than permanent.
+        self.assertEqual({j.employment for j in jobs}, {U})
+
+    def test_a_workable_contract_posting_is_read_as_one(self):
+        from jobradar.adapters import platforms
+        from jobradar.models import Source
+        src = Source(company="Acme", url="https://apply.workable.com/api/v1/"
+                     "widget/accounts/acme", platform="workable", country="UK")
+        payload = {"jobs": [{"title": "Engineering Manager", "url":
+                             "https://apply.workable.com/acme/j/ABC/",
+                             "employment_type": "Contract",
+                             "description": "Lead a team."}]}
+        job = list(platforms.parse_workable(payload, src))[0]
+        self.assertEqual(job.employment, C)
+
+    def test_personio_reads_employment_type_and_not_schedule(self):
+        # Personio sends BOTH <employmentType>permanent</employmentType> and
+        # <schedule>full-time</schedule>. Reading the second would answer a
+        # different question.
+        from jobradar.adapters import platforms
+        from jobradar.models import Source
+        src = Source(company="Acme", url="https://acme.jobs.personio.de/xml",
+                     platform="personio", country="UK")
+        xml = ("<positions><position><id>1</id><name>Engineering Manager</name>"
+               "<office>London</office><employmentType>freelance</employmentType>"
+               "<schedule>full-time</schedule><description>x</description>"
+               "</position></positions>")
+        job = list(platforms.parse_personio(xml, src))[0]
+        self.assertEqual(job.employment, C)
+
+    def test_every_platform_with_the_field_actually_calls_the_mapper(self):
+        # A row count would have passed while the column stayed empty, which
+        # is this repo's signature failure. Assert the call site exists for
+        # each platform the live probe found the field on.
+        src = (Path(__file__).parent.parent / "jobradar" / "adapters"
+               / "platforms.py").read_text(encoding="utf-8")
+        import ast
+        tree = ast.parse(src)
+        wired = set()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            if not node.name.startswith("parse_"):
+                continue
+            body = ast.dump(node)
+            if "from_platform" in body:
+                wired.add(node.name.removeprefix("parse_"))
+        for platform in ("ashby", "lever", "workable", "smartrecruiters",
+                         "recruitee", "personio"):
+            self.assertIn(platform, wired,
+                          f"parse_{platform} does not read the employment field")
+
+
 class Flag(unittest.TestCase):
     def test_only_contract_roles_get_one(self):
         self.assertEqual(employment.flag(P, "permanent"), "")
@@ -365,6 +533,49 @@ class StoredAndReadBack(unittest.TestCase):
         row = self.con.execute("SELECT employment FROM roles WHERE uid='old'"
                                ).fetchone()
         self.assertEqual(row["employment"], U)
+
+
+class RescreenKeepsWhatOnlyAScanCanKnow(unittest.TestCase):
+    """The platform's field lives in the column and nowhere else.
+
+    `rescreen` rebuilds a Job from the stored row and re-derives the columns.
+    Building it with the default "unstated" and re-running the text
+    classifier discarded the employer's own answer and replaced it with a
+    guess: a Workable posting typed "Contract", whose description says
+    nothing about terms, was silently downgraded by the command whose job is
+    to refresh it. Only a fresh scan can recover it, so nothing here may
+    throw it away.
+    """
+
+    def test_the_command_carries_the_stored_value_into_the_job(self):
+        import ast
+        src = (Path(__file__).parent.parent / "jobradar" / "cli.py").read_text(
+            encoding="utf-8")
+        tree = ast.parse(src)
+        fn = next(n for n in ast.walk(tree)
+                  if isinstance(n, ast.FunctionDef) and n.name == "cmd_rescreen")
+        # The Job(...) built from the row must pass `employment`. Without it
+        # the field defaults to "unstated" and enrich overwrites the column.
+        calls = [n for n in ast.walk(fn)
+                 if isinstance(n, ast.Call)
+                 and isinstance(n.func, ast.Name) and n.func.id == "Job"]
+        self.assertTrue(calls, "cmd_rescreen no longer builds a Job")
+        for c in calls:
+            self.assertIn("employment", [k.arg for k in c.keywords],
+                          "cmd_rescreen builds a Job without carrying "
+                          "employment, so a platform-stated value is lost")
+
+    def test_the_row_is_selected_so_there_is_something_to_carry(self):
+        src = (Path(__file__).parent.parent / "jobradar" / "cli.py").read_text(
+            encoding="utf-8")
+        import ast
+        tree = ast.parse(src)
+        fn = next(n for n in ast.walk(tree)
+                  if isinstance(n, ast.FunctionDef) and n.name == "cmd_rescreen")
+        sql = " ".join(n.value for n in ast.walk(fn)
+                       if isinstance(n, ast.Constant) and isinstance(n.value, str))
+        self.assertIn("r.employment", sql,
+                      "cmd_rescreen does not select the employment column")
 
 
 class Dashboard(unittest.TestCase):

@@ -2143,7 +2143,20 @@ def cmd_rescreen(args) -> int:
                                   currency=r["salary_currency"],
                                   period=r["salary_period"] or "year",
                                   confirmed=bool(r["salary_confirmed"]),
-                                  raw=r["salary_label"]))
+                                  raw=r["salary_label"]),
+                    # Carried in, not left at the default.
+                    #
+                    # `employment` can come from the PLATFORM's own field,
+                    # which six of them supply and which is not stored
+                    # anywhere except in this column. Building the Job with
+                    # the default "unstated" and re-deriving threw that away
+                    # and replaced it with a guess at the prose: a Workable
+                    # posting typed "Contract" by its employer, whose text
+                    # says nothing, would be silently downgraded to
+                    # "unstated" by the very command meant to refresh it.
+                    # Only a fresh scan can recover it, so nothing here may
+                    # discard it.
+                    employment=r["employment"] or "unstated")
             # Re-derive the stored columns, not only the verdict.
             #
             # `city`, `country` and `work_mode` are computed by `screen.enrich`
