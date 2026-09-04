@@ -2,7 +2,7 @@
 
 [job-radar](../README.md)
 
-The bundled list is 17,811 employer job boards, read straight from the
+The bundled list is 17,810 employer job boards, read straight from the
 applicant tracking system each employer runs, plus three keyword searches.
 This is the long version: why employer boards rather than an aggregator, the
 two aggregators that are in and how to switch them on, every well-known job
@@ -229,7 +229,7 @@ one live snapshot held **five** engineering-leadership titles across roughly
 
 **Fields you cannot select for, because most of the list is still unlabelled.**
 This used to read as a shortage of employers. It is now a shortage of tags. Of
-17,815 sources, **6,093 carry a sector tag and 11,722 carry none**: the harvest
+17,814 sources, **6,092 carry a sector tag and 11,722 carry none**: the harvest
 that took this list from hundreds to thousands read board addresses out of a
 public crawl index, and an address does not say what industry the employer is
 in. The tagged ones are 1,311 healthcare, 1,304 finance, 512 education, 498
@@ -299,7 +299,7 @@ found 23 dead boards, and 19 of those had simply moved ATS and were hiding
 A weekly job in this repository revalidates every board on Sunday mornings and
 opens a pull request pruning anything dead. Growing the list is a separate job
 that does not live here: the crawl-index harvest that found most of these
-17,811 boards runs in a private maintainer repository, so that forking this
+17,810 boards runs in a private maintainer repository, so that forking this
 does not set a crawler loose. **Neither of them reaches your copy.**
 
 - **Cloned it?** Your source list is frozen at the day you cloned.

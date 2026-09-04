@@ -13,7 +13,7 @@ deployments. Nineteen of the rows are platforms the bundled source list
 actually uses; JazzHR, Reed and Adzuna have a row and no entry on it, and
 Cornerstone has a row and no adapter. Four platforms the list does use have no
 row here, three of them large: **Workable's own boards** (2,094 sources),
-**Personio** (1,258), **Recruitee** (993) and Workable's recently-posted feed
+**Personio** (1,258), **Recruitee** (992) and Workable's recently-posted feed
 (1). Personio and Recruitee are two of the five adapters marked unverified,
 and the closing paragraph says what that means. Workable's own boards are
 neither unverified nor unread, and their absence is a gap in this file rather

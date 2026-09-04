@@ -4,7 +4,7 @@
   "version": 6,
   "validated": "2026-08-25",
   "checked": "2026-08-25",
-  "boards": 17811
+  "boards": 17810
  },
  "sources": [
   {
@@ -72875,12 +72875,12 @@
    "country": "DE"
   },
   {
-   "company": "Randstad UK",
+   "company": "Randstad Austria",
    "url": "https://randstad.jobs.personio.de/xml",
    "platform": "personio",
    "sector": "professional-services",
-   "country": "UK",
-   "domain": "randstad.co.uk"
+   "country": "AT",
+   "domain": "randstad.at"
   },
   {
    "company": "Raum",
@@ -75619,14 +75619,6 @@
    "url": "https://addepto.recruitee.com/api/offers/",
    "platform": "recruitee",
    "country": "PL"
-  },
-  {
-   "company": "Adecco UK",
-   "url": "https://adecco.recruitee.com/api/offers/",
-   "platform": "recruitee",
-   "sector": "professional-services",
-   "country": "UK",
-   "domain": "adecco.co.uk"
   },
   {
    "company": "Adhese",
