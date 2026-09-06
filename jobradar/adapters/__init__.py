@@ -807,7 +807,23 @@ def parse(payload, src: Source) -> list[Job]:
     """
     p = by_name(src.platform) or detect(src.url)
     try:
-        return [j for j in p.parse(payload, src) if j.title and j.url]
+        jobs = [j for j in p.parse(payload, src) if j.title and j.url]
+        # What the source's own query already asserted, applied centrally so
+        # every platform gets it rather than each parser remembering to.
+        #
+        # Only into a gap. A per-result field the platform actually sent is
+        # better evidence than a filter on the URL, so an adapter that set
+        # `employment` from the payload keeps it. See `Source.employment` for
+        # why this exists and what has to be true before a source may declare
+        # one.
+        if src.employment:
+            from ..employment import from_platform
+            declared = from_platform(src.employment)
+            if declared:
+                for j in jobs:
+                    if not j.employment or j.employment == "unstated":
+                        j.employment = declared
+        return jobs
     except Exception as e:  # a malformed board must not kill the whole run
         why = f"{type(e).__name__}: {str(e)[:200]}"
         with _unreadable_lock:

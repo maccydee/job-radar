@@ -196,6 +196,25 @@ class Source:
     method: str = "GET"
     body: dict[str, Any] | None = None
     keyword_template: bool = False   # url contains {keyword}, expanded per title
+    # What this source's QUERY already asserts about employment type, for the
+    # platforms that filter at the request and carry no per-result flag.
+    #
+    # Reed is the case this exists for. Its search API has a `contract=true`
+    # parameter and no field on the row saying which kind of listing you are
+    # looking at, so the only place the answer exists is the URL. Measured on
+    # 6 September 2026 for "engineering manager": 418 results with
+    # `contract=true`, 3,584 with `permanent=true`, 4,112 unfiltered, and ZERO
+    # overlap between the first two pages. The text classifier reading the
+    # same 100 known-contract rows labelled 57 of them and called one
+    # permanent, which is a flatly wrong answer the query could have
+    # prevented.
+    #
+    # Only ever set this from a filter somebody has VERIFIED filters. Two
+    # LinkedIn sources were added and removed the same day for asserting a
+    # job-type scope the endpoint ignored: `f_JT=T` returned the unfiltered
+    # set, and `f_JT=C` returned a different set of FULL_TIME roles. A source
+    # that lies here mislabels every row it returns, confidently.
+    employment: str = ""
     # True when `adapters.prepare()` synthesised `method`/`body` from the URL
     # shape rather than reading them from the file. Writing derived values back
     # out made `save(load_file(x), x)` non-idempotent: the weekly prune of one
@@ -227,6 +246,8 @@ class Source:
                 d["body"] = self.body
         if self.keyword_template:
             d["keyword_template"] = True
+        if self.employment:
+            d["employment"] = self.employment
         return d
 
     @classmethod
@@ -241,4 +262,5 @@ class Source:
             method=d.get("method", "GET"),
             body=d.get("body"),
             keyword_template=bool(d.get("keyword_template")),
+            employment=(d.get("employment") or ""),
         )

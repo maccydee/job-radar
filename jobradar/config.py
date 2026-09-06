@@ -608,7 +608,8 @@ def _sectors(values) -> list[str]:
 # What one `sources.extra` entry may say. Taken from `Source.from_dict`, which
 # is the code that actually reads it.
 EXTRA_SOURCE_KEYS = {"company", "url", "platform", "sector", "country",
-                     "domain", "method", "body", "keyword_template"}
+                     "domain", "method", "body", "keyword_template",
+                     "employment"}
 
 # A source is fetched exactly as written, so this is the whole test of whether
 # it could ever be fetched at all.
@@ -760,6 +761,22 @@ def _extra_sources(values, where: str) -> list[dict]:
                     f"{label}: `keyword_template: true` but the url has no "
                     f"`{{keyword}}` in it, so it would be fetched once per "
                     f"title and every copy would be the same request.")
+
+        if "employment" in d:
+            # A source may declare what its own query already filtered for,
+            # for platforms that filter at the request and send no per-result
+            # flag. Refused unless it is one of the three real values: a typo
+            # here would label every row the source returns, and label them
+            # wrongly, with nothing on the row to show where it came from.
+            from .employment import VALUES as _EMP_VALUES
+            v = d["employment"]
+            if not isinstance(v, str) or v.strip().lower() not in _EMP_VALUES:
+                raise ConfigError(
+                    f"{label}: `employment` must be one of "
+                    f"{', '.join(sorted(_EMP_VALUES))}, and only where the "
+                    f"URL's own filter has been checked to actually filter. "
+                    f"Every posting this source returns is labelled with it.")
+            d["employment"] = v.strip().lower()
 
         out.append(d)
     return out

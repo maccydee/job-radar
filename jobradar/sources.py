@@ -205,7 +205,16 @@ def expand_templates(srcs: list[Source], titles: list[str],
                     # `coverage` counts keyword sources to warn that they
                     # return leads with no description and include agencies,
                     # and with the flag gone it counted none of them.
-                    keyword_template=True))
+                    keyword_template=True,
+                    # Same shape, same fix, found the same way. A Reed source
+                    # scoped to `contract=true` declares `employment:
+                    # contract`, and dropping it here meant every expanded
+                    # search arrived unscoped: 100 postings known to be
+                    # contract work were classified from their prose instead,
+                    # which labelled 57, missed 42 and called one permanent.
+                    # The declaration lives on the template and every search
+                    # built from it inherits the same query.
+                    employment=s.employment))
     return out
 
 

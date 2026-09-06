@@ -54,6 +54,40 @@ way NHS Jobs works, so that single line becomes up to twelve searches
 (`sources.MAX_KEYWORD_TITLES`). A scan names any title past the cap rather
 than dropping it silently.
 
+**Contract and day-rate work, and the one parameter that decides it.** The
+example above carries `postedByDirectEmployer=true`, which is right for
+permanent hiring and wrong for contract. UK day-rate work is advertised by
+agencies almost without exception. Measured on 6 September 2026 for
+"engineering manager":
+
+| query | results |
+|---|---|
+| `contract=true`, agencies included | **418** |
+| `contract=true&postedByDirectEmployer=true` | 11 |
+| every unkeyed board in this tool, combined | 19 |
+
+So one parameter discards 97% of the market, and Reed with it turned off is
+more than twenty times every other source here put together. For contract
+work, drop it and filter at the query instead:
+
+```yaml
+    - company: Reed contract
+      url: "https://www.reed.co.uk/api/1.0/search?keywords={keyword}&contract=true&permanent=false"
+      platform: reed
+      country: UK
+      keyword_template: true
+      employment: contract
+```
+
+`employment: contract` is what makes the label right. Reed filters at the
+request and puts no flag on the row, so the query is the only place the answer
+exists, and reading it out of the advert's prose instead labelled 57 of 100
+known-contract postings and called one of them permanent. Only declare it for
+a filter you have checked: `contract=true` returns 418, `permanent=true`
+returns 3,584, unfiltered returns 4,112, and the two filtered pages share no
+postings. See `docs/CONFIG.md` for what happens when a source asserts a filter
+the platform ignores.
+
 **What to expect from it.** These are aggregator listings and they are not the
 equal of an employer's own board:
 

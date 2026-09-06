@@ -59,6 +59,27 @@ _TITLE_HINT = re.compile(
 )
 
 
+# The sources that cannot work without a key, said out loud in the wizard
+# rather than discovered from an error message later.
+#
+# `why` is the reason to bother, with a number, because "Reed needs a key" is
+# not an argument and "418 contract roles against 19" is.
+API_KEY_SOURCES = (
+    ("Reed", "https://www.reed.co.uk/developers/jobseeker",
+     "UK jobs, and the only realistic route to UK contract and day-rate work. "
+     "Measured 6 Sept 2026: 418 contract listings for 'engineering manager', "
+     "against 19 across every unkeyed board in this tool.",
+     (("reed_api_key", "API key"),)),
+    ("Adzuna", "https://developer.adzuna.com/signup",
+     "19 national job indexes, so the one source here that can watch more "
+     "than one country from the same config.",
+     # Two values, not one. Asking for a single "Adzuna key" would collect
+     # half a credential and fail at the first fetch with a 401 that says
+     # nothing about which half is missing.
+     (("adzuna_app_id", "app id"), ("adzuna_app_key", "app key"))),
+)
+
+
 def _word_pattern(word: str) -> str:
     """A plain word the user typed, as a regex that matches that word only.
 
@@ -169,6 +190,18 @@ def write_config(path: Path, answers: dict) -> Path:
     # documented second step every time.
     extra_key = f"  extra:\n{extra_block}" if extra_block else "  extra: []"
 
+    # Keys, written only when there is one. An empty `reed_api_key:` line is
+    # not harmless: it reads as a configured source that is failing rather
+    # than one nobody has turned on.
+    key_lines = []
+    for _label, _url, _why, _fields in API_KEY_SOURCES:
+        for _field, _ in _fields:
+            if answers.get(_field):
+                key_lines.append(f"  {_field}: {_q(answers[_field])}")
+    keys_block = ("\n  # Keys you gave at setup. This file holds a credential,"
+                  "\n  # so keep it out of version control.\n"
+                  + "\n".join(key_lines)) if key_lines else ""
+
     cvq = _q(answers.get("cv_path") or "")
     body = f"""# job-radar config
 # Everything the tool does is decided here. Edit freely; re-running
@@ -216,7 +249,7 @@ dealbreakers:
 # Which employers to watch. Empty means all of them.
 sectors:{ylist(answers.get('sectors'), indent="  ")}
 
-sources:
+sources:{keys_block}
   use_bundled: {str(answers.get('use_bundled', True)).lower()}
   # Limit the bundled list to these countries. Empty means all.
   countries:{ylist(answers.get('source_countries'), indent="    ")}
@@ -811,8 +844,38 @@ def run(path: Path, non_interactive: bool = False, cv: str | None = None,
                 print("     not found. Add the careers URL later with "
                       "`job-radar discover <url> --add`.")
 
-    # 7. politeness
-    print("\n7. Fetch settings")
+    # 8. keys for the sources that need one
+    #
+    # Two of the adapters in this tool are keyed, and until now nothing in the
+    # documented first step ever mentioned them, so the only way to find out
+    # was to add a source by hand and read the error. Reed is the one that
+    # matters for UK contract work: measured on 6 September 2026, "engineering
+    # manager" returns 418 contract listings there, against 19 across all
+    # 17,810 unkeyed boards.
+    #
+    # Asked, never guessed at, and never stored anywhere but this file, which
+    # is gitignored. If the answer is blank the tool works exactly as before.
+    print("\n7. API keys  (optional, skip with enter)")
+    print("   Two sources need a free key. Everything else works without one.")
+    for label, url, why, fields in API_KEY_SOURCES:
+        print(f"\n   {label}: {why}")
+        print(f"   Free, no card: {url}")
+        got = {}
+        for field, prompt in fields:
+            v = _ask(f"   {label} {prompt} (enter to skip)", "").strip()
+            if not v:
+                break
+            got[field] = v
+        # All of them or none. A half-entered credential is a 401 later whose
+        # message cannot say which half is missing.
+        if len(got) == len(fields):
+            a.update(got)
+        elif got:
+            print(f"   Skipping {label}: it needs all "
+                  f"{len(fields)} values to work.")
+
+    # 8. politeness
+    print("\n8. Fetch settings")
     a["concurrency"] = int(
         _ask("   How many different boards to read at once "
              "(each host is paced separately, so 16 is kind)", "16") or 16)
