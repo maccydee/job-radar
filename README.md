@@ -95,6 +95,17 @@ you keep and how many requests you allow in flight (`fetch.concurrency`,
 default 16, capped at 64). `job-radar scan --limit 200` takes a couple of
 minutes if you only want to watch it work.
 
+**If a scan is interrupted, `job-radar scan --resume` picks it up.** An hour is
+long enough that a closed lid, a killed terminal or a dropped connection will
+sometimes end one part way through. Roles already found are safe either way,
+because each pass writes as it goes, but without `--resume` the next scan
+starts at source one and re-asks every server it had already read. A resume
+skips only the sources whose postings were actually stored, never the ones
+that were merely fetched, and it refuses itself with a reason if your sources
+or titles changed since or if the checkpoint is more than a day old: skipping
+a source your current config wants would lose those roles silently, which is
+worse than the hour.
+
 **The `claude` CLI is a separate prerequisite**, and only for the features
 that write or judge something: the screen, CV and cover letter buttons in the
 dashboard, and the `job-radar rank` and `job-radar generate` commands. Those

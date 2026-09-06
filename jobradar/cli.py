@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 
 import yaml
 
-from . import adapters, output, sources as src_mod
+from . import adapters, output, progress as progress_mod, sources as src_mod
 import webbrowser
 
 from . import serve as serve_mod
@@ -178,7 +178,16 @@ def _phase_minutes(group) -> float:
     return max(worst, len(group) * 0.48 / DEFAULT_CONCURRENCY / 60)
 
 
-def _flush_phase(con, cfg, jobs, args, run=None) -> int:
+# How often a scan checkpoints inside a pass.
+#
+# 400 sources is roughly two minutes on the paced hosts and seconds on the
+# fast ones, so a killed scan loses at most that. Lower is not free: each
+# checkpoint re-screens everything the scan has parsed so far, which is the
+# same set growing over the run.
+CHECKPOINT_EVERY = 400
+
+
+def _flush_phase(con, cfg, jobs, args, run=None, on_stored=None) -> int:
     """Store and render what the scan has so far, between passes.
 
     Deliberately quiet and deliberately partial. It screens and writes what
@@ -191,16 +200,29 @@ def _flush_phase(con, cfg, jobs, args, run=None) -> int:
     and are equally new to the same run. It is passed in rather than read off
     the counter here, because a second scan finishing between two of these
     passes moves that counter underneath us.
+
+    `on_stored` is called only after `commit()` returns, and is how the resume
+    checkpoint learns that a source is safe to skip. It cannot be inferred
+    from the return value: this returns 0 both when nothing matched the config
+    and when the write threw, and those are opposite facts. A checkpoint that
+    read a failed write as "nothing to store" would skip those sources for
+    ever and the roles would never be fetched again.
     """
     from . import store
     from .output import html as html_mod
 
     kept, _ = screen_run(list(jobs), cfg)
     if not kept:
+        # Nothing matched, which is still a successful read of sources that
+        # held nothing for this config. Safe to skip on a resume.
+        if on_stored:
+            on_stored()
         return 0
     try:
         store.upsert_roles(con, kept, run=run)
         con.commit()
+        if on_stored:
+            on_stored()
         outdir = Path(args.out or cfg.out_dir)
         if "html" in cfg.formats:
             html_mod.write(outdir / "index.html", new=[], seen=kept, dropped={},
@@ -285,6 +307,21 @@ def cmd_scan(args) -> int:
              f"where pacing applies at all; the rest hold one board each and "
              f"are limited by concurrency ({cfg.concurrency}), not by rate.")
 
+    from . import store
+    # A dry run touches no file it was not pointed at. It used to create the
+    # database anyway, empty, purely because connecting creates it, which made
+    # "this writes nothing" untrue in the one mode people use to check exactly
+    # that before trusting the tool.
+    #
+    # Opened HERE, above the closures, rather than further down beside the
+    # migration. `tick` checkpoints mid-pass and so reads `con`, and although
+    # a closure only resolves names when it runs, the invariant that `con`
+    # exists before anything can reach it is worth being able to see in the
+    # source. `test_the_connection_is_open_before_the_first_flush` checks
+    # exactly that by line number, and it exists because a mid-scan flush
+    # once raised UnboundLocalError.
+    con = store.connect(":memory:" if args.dry_run else args.db)
+
     done = {"n": 0}
     all_jobs: list = []
     counts: dict[str, int] = {}
@@ -336,6 +373,10 @@ def cmd_scan(args) -> int:
                     j.country = tag
         counts[res.source.key] = len(jobs)
         all_jobs.extend(jobs)
+        # Read, parsed, and held in memory only. `hold` is deliberately not
+        # `commit`: nothing here is on disk yet, and a resume that skipped
+        # this source now would lose every posting in `jobs`.
+        progress.hold(res.source.key)
 
     def tick(res):
         """Count the source, and parse it while the fetch is still running.
@@ -364,6 +405,19 @@ def cmd_scan(args) -> int:
         if done["n"] % 25 == 0:
             _say(f"  {done['n']}/{len(srcs)}")
         absorb(res)
+        # Checkpoint inside the pass, not only between passes.
+        #
+        # The last pass is fifty minutes on its own, because apply.workable.com
+        # is paced at 0.7 requests a second, so flushing only at pass
+        # boundaries means a kill late in a scan throws away most of an hour of
+        # other people's bandwidth. This bounds the loss to the last
+        # CHECKPOINT_EVERY sources.
+        #
+        # It is a real screen and write each time, which is not free, but it
+        # runs on the thread that is otherwise blocked waiting on a paced host.
+        if not args.dry_run and done["n"] % CHECKPOINT_EVERY == 0:
+            _flush_phase(con, cfg, all_jobs, args, run=this_run,
+                         on_stored=progress.commit)
 
     # Derived, not written down. This said "only the first 6" while
     # `MAX_KEYWORD_TITLES` was 12, and the note ten lines below reads the
@@ -428,12 +482,6 @@ def cmd_scan(args) -> int:
     _say("The dashboard is worth opening after the first pass; the rest fill "
          "in behind it.")
 
-    from . import store
-    # A dry run touches no file it was not pointed at. It used to create the
-    # database anyway, empty, purely because connecting creates it, which made
-    # "this writes nothing" untrue in the one mode people use to check exactly
-    # that before trusting the tool.
-    con = store.connect(":memory:" if args.dry_run else args.db)
     # The legacy import follows the database, not the working directory.
     # `store.migrate(con)` resolved both of its sources against the cwd, so a
     # scan started in the repo with `--db /tmp/scratch.db` still read this
@@ -482,13 +530,46 @@ def cmd_scan(args) -> int:
 
     # Hold the machine awake for the run, and be honest about what that does.
     # It stops an idle laptop napping; it does not survive the lid closing.
+    # Where a previous scan got to, if it was killed and the list has not
+    # changed since. `--resume` is opt-in: a scan is a read of the world at a
+    # moment, and silently continuing one from hours ago would hand back a
+    # board built from two different moments as though it were one.
+    fp = progress_mod.fingerprint([s.key for s in srcs], cfg.titles_include)
+    if args.resume:
+        progress, why = progress_mod.load(
+            Path(state.path).parent / progress_mod.DEFAULT_NAME, fp,
+            run=this_run)
+        if why:
+            _say(f"  ! {why}.")
+        elif len(progress):
+            _say(f"  resuming: {len(progress):,} sources were already read and "
+                 f"stored, and will be skipped.")
+    else:
+        progress = progress_mod.ScanProgress(
+            Path(state.path).parent / progress_mod.DEFAULT_NAME,
+            fingerprint_=fp, run=this_run)
+        stale = Path(state.path).parent / progress_mod.DEFAULT_NAME
+        if stale.exists():
+            _say("  note: a previous scan left a checkpoint. `--resume` "
+                 "continues it; this run starts from the beginning.")
+
     results = []
     with keep_awake("job-radar is scanning",
                     enabled=not args.no_caffeine) as awake:
         _say(describe(awake.held) + "\n")
         for n, label, group, mins in est:
-            _say(f"Pass {n} of {len(est)}, {label}: {len(group):,} sources, "
-                 f"{_mins(mins)}.")
+            # Only what this run still owes. A resumed scan must not re-ask a
+            # server it already read: those are other people's machines, and
+            # re-reading all of them is the rudest possible way to recover.
+            group, already = progress.filter(group)
+            if already:
+                _say(f"Pass {n} of {len(est)}, {label}: {already:,} already "
+                     f"read, {len(group):,} to go.")
+            else:
+                _say(f"Pass {n} of {len(est)}, {label}: {len(group):,} sources, "
+                     f"{_mins(mins)}.")
+            if not group:
+                continue
             results += fetch_all(
                 group,
                 # Beside the seen-set, so it survives the run that learned it.
@@ -515,7 +596,8 @@ def cmd_scan(args) -> int:
             # nothing.
             ready = 0
             if not args.dry_run and (n < len(est) or n == 1):
-                ready = _flush_phase(con, cfg, all_jobs, args, run=this_run)
+                ready = _flush_phase(con, cfg, all_jobs, args, run=this_run,
+                                     on_stored=progress.commit)
 
             if args.dry_run:
                 pass
@@ -891,6 +973,11 @@ def cmd_scan(args) -> int:
         # database yet.
         state.record(kept, counts)
         state.save()
+        # The scan reached the end, so there is nothing left to resume and the
+        # checkpoint would only mislead the next one. Cleared here rather than
+        # earlier: everything above this line can still fail, and a scan that
+        # died writing its exports is exactly the one worth resuming.
+        progress.clear()
         con.close()
 
     for p in written:
@@ -2562,6 +2649,13 @@ def build_parser() -> argparse.ArgumentParser:
                         "and an idle laptop will otherwise sleep through it.")
     s.add_argument("--dry-run", action="store_true",
                    help="do not record what was seen (re-reports the same roles next time)")
+    s.add_argument("--resume", action="store_true",
+                   help="continue a scan that was killed, skipping the sources "
+                        "it had already read AND stored. Refused, with a "
+                        "reason, if the source list or your titles changed "
+                        "since, or if the checkpoint is more than a day old: "
+                        "skipping a source the current config wants is the "
+                        "silent loss this exists to prevent.")
     s.set_defaults(func=cmd_scan)
 
     d = sub.add_parser("discover", help="find a company's job board from its careers page")

@@ -217,6 +217,7 @@ def _args(d: Path, cfg: Path):
         dry_run = True
         no_enrich = True
         no_caffeine = True
+        resume = False
         no_open = True
         limit = 0
     return A
