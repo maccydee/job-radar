@@ -112,10 +112,23 @@ def test_the_checks_run_before_anything_is_uploaded():
 
     checks = [n.lineno for n in ast.walk(fn) if isinstance(n, ast.Call)
               and isinstance(n.func, ast.Name) and n.func.id == "check"]
-    uploads = [n.lineno for n in ast.walk(fn) if isinstance(n, ast.Call)
-               and any(isinstance(a, ast.List) and a.elts
-                       and isinstance(a.elts[0], ast.Constant)
-                       and a.elts[0].value == "gh" for a in n.args)]
+    # Matched on `release upload` inside the argument list rather than on a
+    # literal "gh" in the first slot. The binary is now resolved at runtime by
+    # `find_gh`, because launchd's PATH does not have it and the upload was
+    # dying with FileNotFoundError after a full hour of building, so the first
+    # element is a Name and not a Constant. Keying on the executable's spelling
+    # made this guard silently watch nothing the moment that changed.
+    def _uploads(call):
+        for a in call.args:
+            if not isinstance(a, ast.List):
+                continue
+            words = [e.value for e in a.elts if isinstance(e, ast.Constant)]
+            if "release" in words and "upload" in words:
+                return True
+        return False
+
+    uploads = [n.lineno for n in ast.walk(fn)
+               if isinstance(n, ast.Call) and _uploads(n)]
     assert checks, "nothing in main() calls check() any more"
     assert uploads, "no `gh` upload found; this guard is watching nothing"
     assert min(checks) < min(uploads), (

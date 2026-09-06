@@ -999,6 +999,52 @@ def cmd_scan(args) -> int:
     return 0
 
 
+def cmd_doctor(args) -> int:
+    """How old everything is, and what to run about it.
+
+    Exists because three scheduled jobs were found to have been failing for
+    weeks on the same afternoon, and not one of them was noticed by looking at
+    the tool. A stale artefact renders exactly like a fresh one: last week's
+    seed is a good seed, an unvalidated source list is a source list, and a
+    board built by a scan that died at 88% has thousands of roles on it and no
+    visible gap.
+
+    Exit code 1 when anything is stale, so a wrapper or a launchd job can act
+    on it rather than parse this output.
+    """
+    from . import freshness, store
+
+    con = None
+    try:
+        con = store.connect(args.db, must_exist=True)
+    except Exception:
+        # No database yet is a fact about a fresh checkout, not a failure of
+        # this command. The other two answers still stand without it.
+        pass
+
+    items = freshness.report(con, seed_path=args.seed_path)
+    if con is not None:
+        con.close()
+
+    mark = {"ok": "  ok  ", "stale": " late ", "broken": "BROKEN", "unknown": "  ?   "}
+    _say("")
+    for i in items:
+        _say(f"  [{mark[i.state]}]  {i.says()}")
+        if i.detail:
+            _say(f"              {i.detail}")
+        if not i.ok and i.fix:
+            _say(f"              -> {i.fix}")
+    bad = [i for i in items if not i.ok]
+    _say("")
+    if not bad:
+        _say("Everything is current.")
+        return 0
+    _say(f"{len(bad)} of {len(items)} need attention. Nothing here is broken "
+         f"in a way you would see on the dashboard, which is the point of "
+         f"asking.")
+    return 1
+
+
 # ---------------------------------------------------------------- discover
 def cmd_discover(args) -> int:
     results = []
@@ -2657,6 +2703,14 @@ def build_parser() -> argparse.ArgumentParser:
                         "skipping a source the current config wants is the "
                         "silent loss this exists to prevent.")
     s.set_defaults(func=cmd_scan)
+
+    dr = sub.add_parser("doctor", help="how old everything is, and what to "
+                                      "run about it")
+    dr.add_argument("--db", default=None,
+                    help="database path (default data/job-radar.db)")
+    dr.add_argument("--seed-path", default=None,
+                    help="where the local shard set is (default seed-build/)")
+    dr.set_defaults(func=cmd_doctor)
 
     d = sub.add_parser("discover", help="find a company's job board from its careers page")
     d.add_argument("targets", nargs="+", help="domain, careers URL, or company name")

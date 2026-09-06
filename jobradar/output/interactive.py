@@ -77,6 +77,17 @@ _EXTRA_CSS = """
   font-size:.6875rem;font-weight:600;letter-spacing:.02em;
   color:var(--accent);vertical-align:middle;white-space:nowrap}
 
+/* Everything else that ages, beside the sources badge.
+
+   Its own class rather than `.sync.warn`, which belongs to the source-list
+   badge and which a test asserts on exactly: two elements wearing one class
+   made that test unable to tell them apart, and a guard that cannot tell what
+   it is looking at is not a guard. `margin-left:0` because `.sync` claims the
+   whole gap with `margin-left:auto` and the second one would be pushed off
+   the end of the row. */
+.sync.agecheck{margin-left:var(--s3);color:#d98080;border-bottom-color:#d98080}
+.sync.agecheck.broken{font-weight:600}
+
 /* Contract and interim work, on the title line.
 
    Filled rather than outlined, unlike `.ready` above, and in `--flag` rather
@@ -1205,6 +1216,38 @@ def render(con, home_currency: str = "") -> str:
                  + ('<button id="pull" type="button" title="git pull --ff-only '
                     'in this checkout">Pull</button>' if age > 8 else ''))
 
+    # Everything else that ages, in the one place the reader already looks.
+    #
+    # The sources line above has said its own age for a while, and that was
+    # the only thing on this page that ever admitted to being old. Three
+    # scheduled jobs were then found to have been failing for weeks: the
+    # weekly validation dying on its first templated source, the seed rebuild
+    # dropping 287,219 roles at the upload, and two scans killed part way. The
+    # board looked exactly the same throughout, because a stale artefact
+    # renders identically to a fresh one.
+    #
+    # Only shown when something is actually late. A permanent green badge
+    # saying everything is fine becomes furniture within a week and then it is
+    # not read at all.
+    from .. import freshness as _fresh
+    _stale_items = [i for i in _fresh.report(con) if not i.ok
+                    and i.key != "sources"]     # sources has its own badge
+    if not rows:
+        # A checkout that has never scanned already says so, at length, in the
+        # empty state. Two messages about the same absence is one too many.
+        _stale_items = []
+    if _stale_items:
+        _worst = _fresh.worst(_stale_items)
+        _bits = "; ".join(
+            f"{i.label.lower()} {i.days} days ago" if i.days is not None
+            else f"{i.label.lower()} never"
+            for i in _stale_items)
+        _tip = " | ".join(f"{i.says()}. {i.fix}" for i in _stale_items if i.fix)
+        _stale = (f'<span class="sync agecheck {_worst}" '
+                  f'title="{_h.escape(_tip, quote=True)}">{_h.escape(_bits)}</span>')
+    else:
+        _stale = ""
+
     sec = Counter((r["sector"] or "other") for r in rows)
     chips = "".join(
         f'<button aria-pressed="false" data-sec="{_h.escape(s, quote=True)}">'
@@ -1308,7 +1351,7 @@ setTimeout(()=>{{const b=document.getElementById('boot'); if(b) b.remove();}},80
 </div>
 <div class="actions"><button id="rank" type="button">Rank against my CV</button>
   <button id="rankstop" type="button" hidden>Stop</button>
-  <span id="rankinfo"></span><span id="jobsinfo"></span>{_sync}</div>
+  <span id="rankinfo"></span><span id="jobsinfo"></span>{_sync}{_stale}</div>
 <div class="chips" role="group" aria-label="Filter by sector">{chips}</div>
 <div class="chips" role="group" aria-label="Filter by working pattern">{modes}</div>
 <div class="chips emps" role="group" aria-label="Filter by employment type">{emps}</div>

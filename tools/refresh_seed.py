@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -213,6 +214,55 @@ def _shards_look_read(out: Path) -> list[str]:
     return problems
 
 
+# Where `gh` might be, when PATH is not what a terminal has.
+#
+# This job runs from launchd, which starts it with a minimal PATH rather than
+# the one a login shell builds. `gh` lives in ~/.local/bin here, which is not
+# on it, so `subprocess.run(["gh", ...])` raised FileNotFoundError. That threw
+# after the build, so every Sunday since it was scheduled this spent an hour
+# harvesting 287,219 roles across 165 shards and then dropped all of it at the
+# upload, writing a traceback to a log nobody reads. The published seed sat at
+# 28 August while the job "ran" weekly.
+_GH_FALLBACKS = (
+    Path.home() / ".local" / "bin" / "gh",
+    Path("/opt/homebrew/bin/gh"),
+    Path("/usr/local/bin/gh"),
+    Path("/usr/bin/gh"),
+)
+
+
+def find_gh() -> str | None:
+    """The `gh` binary, looked for on PATH and then where it actually is."""
+    found = shutil.which("gh")
+    if found:
+        return found
+    for p in _GH_FALLBACKS:
+        if p.is_file() and os.access(p, os.X_OK):
+            return str(p)
+    return None
+
+
+def gh_problem(gh: str | None) -> str:
+    """Why an upload could not happen, checked BEFORE the build.
+
+    The build is an hour of other people's bandwidth. Discovering at the end
+    of it that the thing which publishes the result is missing wastes the hour
+    and, worse, looks like a run: the log ends with a traceback and the
+    release still holds last week's set, which is a perfectly good seed and
+    gives nobody a reason to look.
+    """
+    if not gh:
+        return ("`gh` is not on PATH and is not in any of the usual places. "
+                "This runs from launchd, which does not use a login shell's "
+                "PATH. Install the GitHub CLI, or point this job at its "
+                "absolute path.")
+    r = subprocess.run([gh, "auth", "status"], capture_output=True, text=True)
+    if r.returncode != 0:
+        return ("`gh` is installed but not signed in, so the upload would "
+                "fail after the build: " + (r.stderr or r.stdout).strip()[:200])
+    return ""
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--out", default=str(Path.home() / "job-radar" / "seed-build"))
@@ -222,6 +272,15 @@ def main(argv=None) -> int:
                     help="upload even if the checks fail. For a genuine "
                          "market change, never for an unattended run.")
     args = ap.parse_args(argv)
+
+    # Before the hour, not after it. See `gh_problem`.
+    gh = find_gh()
+    if not args.dry_run:
+        why = gh_problem(gh)
+        if why:
+            print(f"not building: {why}")
+            print("Nothing was fetched and the published seed is unchanged.")
+            return 1
 
     out = Path(args.out)
     # Built beside the old one and only swapped in at the end, so a failed
@@ -277,14 +336,14 @@ def main(argv=None) -> int:
     # was true of the local directory and false of the thing people fetch.
     print("\nuploading shards", flush=True)
     shards = sorted(p.name for p in staging.glob("*.jsonl.gz"))
-    r = subprocess.run(["gh", "release", "upload", TAG, *shards, "--clobber"],
+    r = subprocess.run([gh, "release", "upload", TAG, *shards, "--clobber"],
                        cwd=str(staging))
     if r.returncode != 0:
         print(f"upload failed with {r.returncode}; the published index still "
               f"describes the previous set, which is still there")
         return 1
     print("uploading index", flush=True)
-    r = subprocess.run(["gh", "release", "upload", TAG, "index.json",
+    r = subprocess.run([gh, "release", "upload", TAG, "index.json",
                         "--clobber"], cwd=str(staging))
     if r.returncode != 0:
         print(f"index upload failed with {r.returncode}. The new shards are "
