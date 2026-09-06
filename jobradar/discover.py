@@ -962,8 +962,44 @@ def validate_source(src: Source) -> dict:
     """
     if src.keyword_template or "{keyword}" in src.url:
         from urllib.parse import quote_plus
-        probe = replace(src, url=src.url.format(keyword=quote_plus(PROBE_KEYWORD)),
-                        keyword_template=False)
+        from .sources import UnusableSourceURL, fill_template
+        # `fill_template`, not `str.format`, and this is the whole reason that
+        # function exists. Filling only `{keyword}` raises KeyError on any
+        # other placeholder, the error comes back out of
+        # `ThreadPoolExecutor.map` in `cmd_validate`, and the run dies at the
+        # first source carrying one. Every source after it then goes unchecked
+        # and the health check reports nothing about them either way.
+        #
+        # Not hypothetical, and not new: `sources.fill_template` was written
+        # against exactly this, with a docstring saying one source carrying
+        # `&loc={location}` killed a whole run. This call site was never moved
+        # over, so the weekly validation has been failing on `Workable search`
+        # (`location={country}`) with `KeyError: 'country'`, filing an issue
+        # each week that blamed a throttled runner.
+        #
+        # `{country}` is filled with nothing here on purpose. This is a
+        # liveness probe, and an aggregator asked for one keyword and no
+        # location answers for everywhere, which is the broadest question and
+        # the one least likely to read as dead.
+        try:
+            probe_url = fill_template(src.url, keyword=quote_plus(PROBE_KEYWORD))
+        except UnusableSourceURL as e:
+            # One unusable URL is a fact about one source. Report it and let
+            # the other 17,922 be checked.
+            return {
+                "company": src.company,
+                "url": src.url,
+                "platform": src.platform,
+                "live_jobs": 0,
+                "verdict": "unreachable",
+                "transport": None,
+                # Never prunable. The tool could not ask the question, which
+                # is not the same as the board having no answer, and this
+                # verdict is what `--prune` deletes on.
+                "prunable": False,
+                "note": f"could not be probed: {e}",
+            }
+        probe = replace(src, url=probe_url, keyword_template=False)
         alerts: list = []
         n, _, err = _count_with_transport(probe, alerts)
         return {

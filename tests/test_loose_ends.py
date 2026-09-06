@@ -81,19 +81,30 @@ def _validate_args(tmp: Path, file: Path, **over) -> argparse.Namespace:
 def test_a_url_placeholder_nothing_can_fill_in_is_named_rather_than_raised():
     """`{location}` is not `{keyword}` and not `{country}`, so there is
     nothing to put there. The old code called `.format` and let the KeyError
-    out."""
+    out.
+
+    This test used to ASSERT that `validate_source` still raised, calling the
+    trap "proof that the guard is load-bearing rather than decorative". It was
+    load-bearing somewhere else and absent here, and the trap it documented
+    then killed the weekly source validation every run: `Workable search`
+    carries `location={country}`, `str.format` raised `KeyError: 'country'`,
+    the error came back out of `ThreadPoolExecutor.map`, and every source
+    after it went unchecked. The workflow filed an issue each week blaming a
+    throttled runner.
+
+    So the assertion is inverted rather than deleted. A bad URL is now one
+    source's problem, reported on its own row, and the rest of the list is
+    still checked. See tests/test_validate_templated_sources.py.
+    """
     odd = Source(company="Odd board", url=ODD_URL, platform="",
                  keyword_template=True)
 
-    # The trap, still there in the function this guard protects: proof that
-    # the guard is load-bearing rather than decorative.
-    raised = None
-    try:
-        disc.validate_source(odd)
-    except Exception as e:              # noqa: BLE001 - the point is the type
-        raised = e
-    assert isinstance(raised, KeyError), \
-        f"expected the underlying KeyError, got {raised!r}"
+    row = disc.validate_source(odd)
+    assert row["verdict"] == "unreachable", row
+    # Never prunable: the tool could not ask the question, which is not the
+    # board having no answer, and `--prune` deletes on "dead".
+    assert row["prunable"] is False, row
+    assert "location" in row["note"], row["note"]
 
     why = src_mod.url_template_error(odd)
     assert why and "location" in why, why
