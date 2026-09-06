@@ -9,7 +9,7 @@ scanner uses.
 
 | Skill | Source of truth | Vendored at |
 |---|---|---|
-| `rate-cv` | [maccydee/rate-cv](https://github.com/maccydee/rate-cv) | `acca44e` |
+| `rate-cv` | [maccydee/rate-cv](https://github.com/maccydee/rate-cv) | `fc8d1ab` |
 | `screen-role` | this repo | native |
 | `job-radar-setup` | this repo | native |
 
