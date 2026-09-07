@@ -1258,13 +1258,63 @@ def test_defaults_ship_no_dealbreakers():
 
 def test_a_dry_run_writes_nothing():
     """It used to insert every role and bump the run counter, so trying the
-    tool out once spent the newness of everything it saw."""
+    tool out once spent the newness of everything it saw.
+
+    Parsed, not grepped. This searched `cmd_scan`'s source for the first
+    literal "upsert_roles" and demanded "args.dry_run" in the 400 characters
+    before it, which is exactly the pattern CLAUDE.md warns about: the first
+    occurrence became a sentence in a docstring explaining why a checkpoint
+    only stores new postings, and the guard failed on prose while the code it
+    was guarding had not changed at all.
+
+    What it actually protects: nothing in a dry run may reach the database.
+    `cmd_scan` never calls `upsert_roles` itself, it calls `_flush_phase`,
+    so the real invariant is that every write path is behind `args.dry_run`.
+    """
+    import ast
     import inspect
+    import textwrap
     from jobradar import cli
-    src = inspect.getsource(cli.cmd_scan)
-    i = src.index("upsert_roles")
-    assert "args.dry_run" in src[max(0, i - 400):i], \
-        "upsert_roles must be guarded by the dry-run check"
+
+    fn = ast.parse(textwrap.dedent(inspect.getsource(cli.cmd_scan))).body[0]
+
+    def _guarded(call):
+        """Is this call dominated by a check on `args.dry_run`?
+
+        Either inside `if not args.dry_run: ...`, or inside a function whose
+        own first act is `if args.dry_run: return`. The second form is what
+        the mid-pass checkpoint uses, and it is the stronger of the two
+        because it holds wherever the function is called from.
+        """
+        for node in ast.walk(fn):
+            if isinstance(node, ast.If) and "dry_run" in ast.dump(node.test):
+                neg = "UnaryOp" in ast.dump(node.test)
+                for branch in (node.body if neg else node.orelse):
+                    for n in ast.walk(branch):
+                        if n is call:
+                            return True
+            if isinstance(node, ast.FunctionDef):
+                early = any(
+                    isinstance(st, ast.If) and "dry_run" in ast.dump(st.test)
+                    and any(isinstance(b, ast.Return) for b in st.body)
+                    for st in node.body)
+                if early:
+                    for n in ast.walk(node):
+                        if n is call:
+                            return True
+        return False
+
+    writes = [n for n in ast.walk(fn)
+              if isinstance(n, ast.Call)
+              and ((isinstance(n.func, ast.Name)
+                    and n.func.id in ("_flush_phase", "_checkpoint"))
+                   or (isinstance(n.func, ast.Attribute)
+                       and n.func.attr in ("upsert_roles", "record", "save")))]
+    assert writes, "cmd_scan no longer writes anything; this guard is watching nothing"
+    unguarded = [n.lineno for n in writes if not _guarded(n)]
+    assert not unguarded, (
+        f"these writes in cmd_scan are not behind a dry-run check, so "
+        f"`scan --dry-run` would store roles: lines {unguarded}")
 
 
 def test_a_draft_that_adds_a_specific_is_caught():

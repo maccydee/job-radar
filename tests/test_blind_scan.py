@@ -53,12 +53,16 @@ def _setup(tmp):
 
 
 def _run(cfg, out, results):
+    """`--state` into the temp tree, always. See test_cli_scan_reporting._scan:
+    without it these tests write the developer's real state/seen.json."""
     buf = io.StringIO()
+    state = Path(cfg).parent / "state" / "seen.json"
     with contextlib.redirect_stdout(buf), \
             mock.patch("jobradar.cli.fetch_all",
                        side_effect=lambda srcs, **k: [results(s) for s in srcs]):
         rc = main(["-c", str(cfg), "scan", "--no-enrich", "--no-caffeine",
-                   "--no-open", "--db", ":memory:", "--out", str(out)])
+                   "--no-open", "--db", ":memory:", "--out", str(out),
+                   "--state", str(state)])
     return rc, buf.getvalue()
 
 

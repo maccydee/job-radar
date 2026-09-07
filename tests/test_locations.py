@@ -703,7 +703,11 @@ def test_dry_run_leaves_the_dashboard_alone():
     with contextlib.redirect_stdout(out), \
             mock.patch("jobradar.cli.fetch_all", return_value=[]):
         rc = main(["-c", str(cfg), "scan", "--dry-run", "--no-enrich",
-                   "--db", ":memory:", "--out", str(d / "out")])
+                   "--db", ":memory:", "--out", str(d / "out"),
+                   # Its own state file. A dry run writes no seen-set, so this
+                   # one was harmless today and would stop being harmless the
+                   # moment somebody dropped `--dry-run` while debugging.
+                   "--state", str(d / "state" / "seen.json")])
     assert rc == 0, out.getvalue()
     assert not (d / "out").exists(), "a dry run wrote the dashboard"
     assert "left alone" in out.getvalue(), "and it should say so"

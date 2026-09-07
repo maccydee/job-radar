@@ -66,11 +66,22 @@ def _results(srcs, **_):
 
 
 def _scan(cfg, db, out, *extra, fetch=_results):
+    """Always with its own `--state`.
+
+    Without it `args.state` is None, `State(None)` falls back to
+    `state/seen.json` RELATIVE TO THE WORKING DIRECTORY, and the suite runs
+    from the repo root. So these tests were writing the developer's real
+    seen-set on every run, and once scans learned to checkpoint they deleted
+    the real `state/scan-progress.json` too, which is how it was noticed: a
+    resumable scan lost its resume point to the test suite.
+    """
     buf = io.StringIO()
+    state = Path(db).parent / "state" / "seen.json"
     with contextlib.redirect_stdout(buf), \
             mock.patch("jobradar.cli.fetch_all", side_effect=fetch):
         rc = main(["-c", str(cfg), "scan", "--no-enrich", "--no-caffeine",
-                   "--no-open", "--db", str(db), "--out", str(out), *extra])
+                   "--no-open", "--db", str(db), "--out", str(out),
+                   "--state", str(state), *extra])
     return rc, buf.getvalue()
 
 

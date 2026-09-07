@@ -181,9 +181,7 @@ def _phase_minutes(group) -> float:
 # How often a scan checkpoints inside a pass.
 #
 # 400 sources is roughly two minutes on the paced hosts and seconds on the
-# fast ones, so a killed scan loses at most that. Lower is not free: each
-# checkpoint re-screens everything the scan has parsed so far, which is the
-# same set growing over the run.
+# fast ones, so a killed scan loses at most that.
 CHECKPOINT_EVERY = 400
 
 
@@ -323,6 +321,8 @@ def cmd_scan(args) -> int:
     con = store.connect(":memory:" if args.dry_run else args.db)
 
     done = {"n": 0}
+    # How much of `all_jobs` is already in the database. See `_checkpoint`.
+    flushed_upto = 0
     all_jobs: list = []
     counts: dict[str, int] = {}
     absorbed: set = set()
@@ -412,12 +412,47 @@ def cmd_scan(args) -> int:
         # boundaries means a kill late in a scan throws away most of an hour of
         # other people's bandwidth. This bounds the loss to the last
         # CHECKPOINT_EVERY sources.
-        #
-        # It is a real screen and write each time, which is not free, but it
-        # runs on the thread that is otherwise blocked waiting on a paced host.
         if not args.dry_run and done["n"] % CHECKPOINT_EVERY == 0:
-            _flush_phase(con, cfg, all_jobs, args, run=this_run,
-                         on_stored=progress.commit)
+            _checkpoint()
+
+    def _checkpoint():
+        """Store the postings parsed since the last one, and mark them safe.
+
+        Only the NEW slice. The first version handed `all_jobs` to
+        `_flush_phase` every time, which re-screens everything the scan has
+        parsed so far, and screening is the expensive half: ~262 microseconds
+        a posting over roughly 480,000 postings a scan. Re-running it on a
+        growing set at every one of ~45 checkpoints is about 48 minutes of
+        CPU against 2 minutes for screening each posting once, and it showed:
+        a scan that should be waiting on other people's servers sat at 98.8%
+        CPU and took ninety minutes to get a third of the way through its
+        five-minute first pass.
+
+        Screening a slice rather than the whole set is not a compromise here.
+        `screen_run` starts with `dedupe`, so a role seen in two slices is
+        stored twice, and `upsert_roles` is keyed on uid, so the second write
+        is the same row. The end-of-scan summary still screens everything
+        together, which is what the counts are taken from.
+        """
+        nonlocal flushed_upto
+        # Guarded here as well as at the call site. `tick` already checks, but
+        # this is a closure and the invariant is "a dry run reaches no write",
+        # which should hold wherever it is called from rather than depending
+        # on every future caller remembering.
+        if args.dry_run:
+            return
+        fresh = all_jobs[flushed_upto:]
+        if not fresh:
+            progress.commit()
+            return
+        mark = len(all_jobs)
+
+        def stored():
+            nonlocal flushed_upto
+            flushed_upto = mark
+            progress.commit()
+
+        _flush_phase(con, cfg, fresh, args, run=this_run, on_stored=stored)
 
     # Derived, not written down. This said "only the first 6" while
     # `MAX_KEYWORD_TITLES` was 12, and the note ten lines below reads the
@@ -596,8 +631,16 @@ def cmd_scan(args) -> int:
             # nothing.
             ready = 0
             if not args.dry_run and (n < len(est) or n == 1):
-                ready = _flush_phase(con, cfg, all_jobs, args, run=this_run,
-                                     on_stored=progress.commit)
+                fresh = all_jobs[flushed_upto:]
+                mark = len(all_jobs)
+
+                def _stored(_mark=mark):
+                    nonlocal flushed_upto
+                    flushed_upto = _mark
+                    progress.commit()
+
+                ready = _flush_phase(con, cfg, fresh, args, run=this_run,
+                                     on_stored=_stored)
 
             if args.dry_run:
                 pass

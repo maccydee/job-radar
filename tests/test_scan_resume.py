@@ -463,5 +463,100 @@ class EndToEnd(unittest.TestCase):
             self.assertIn(s.key, asked, "a fingerprint mismatch still skipped")
 
 
+class CheckpointingIsNotQuadratic(unittest.TestCase):
+    """Each checkpoint stores only what is new since the last one.
+
+    The first version handed the whole accumulated list to `_flush_phase`
+    every time. `screen_run` is ~262 microseconds a posting over roughly
+    480,000 postings a scan, so re-screening a growing set at each of ~45
+    checkpoints is about 48 minutes of CPU against 2 for screening each
+    posting once. Measured on a real run: a scan that should be waiting on
+    other people's servers sat at 98.8% CPU and took ninety minutes to reach
+    a third of the way through its five-minute first pass.
+    """
+
+    def test_the_flush_is_handed_a_slice_and_not_the_whole_list(self):
+        import ast
+        src = (Path(__file__).parent.parent / "jobradar" / "cli.py").read_text(
+            encoding="utf-8")
+        fn = next(n for n in ast.walk(ast.parse(src))
+                  if isinstance(n, ast.FunctionDef) and n.name == "cmd_scan")
+        calls = [n for n in ast.walk(fn) if isinstance(n, ast.Call)
+                 and isinstance(n.func, ast.Name)
+                 and n.func.id == "_flush_phase"]
+        self.assertTrue(calls, "cmd_scan no longer flushes at all")
+        for c in calls:
+            third = c.args[2] if len(c.args) > 2 else None
+            self.assertIsInstance(
+                third, ast.Name,
+                "a checkpoint is passing an expression rather than the "
+                "pre-sliced list of new postings")
+            self.assertNotEqual(
+                third.id, "all_jobs",
+                "a checkpoint re-screens every posting parsed so far, which "
+                "is quadratic over a scan and made one CPU-bound")
+
+    def test_every_posting_still_reaches_the_database_exactly_once(self):
+        # Slicing is only safe if nothing falls between two slices.
+        from jobradar import cli, fetch as fetch_mod
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        (root / "state").mkdir()
+        cv = root / "cv.txt"
+        cv.write_text("Engineering manager.", encoding="utf-8")
+        n_boards = 9
+        (root / "config.yaml").write_text(
+            "titles:\n  include:\n    - engineering manager\n"
+            f"cv:\n  path: {cv}\n"
+            "salary:\n  floor: null\n  currency: GBP\n"
+            "locations:\n  countries: [UK]\n"
+            "output:\n  formats: []\n  dir: out\n"
+            "sources:\n  use_bundled: false\n  extra:\n"
+            + "".join(f"    - company: B{i}\n"
+                      f"      url: https://b{i}.example/api\n"
+                      f"      platform: greenhouse\n" for i in range(n_boards)),
+            encoding="utf-8")
+
+        real = cli.fetch_all
+        every = 3
+        real_every = cli.CHECKPOINT_EVERY
+        cli.CHECKPOINT_EVERY = every
+
+        def fake(group, **kw):
+            out = []
+            for s in group:
+                payload = {"jobs": [{
+                    "title": "Engineering Manager",
+                    "absolute_url": s.url + "/job",
+                    "location": {"name": "London, UK"},
+                    "content": "Lead a team of six in London.",
+                    "id": abs(hash(s.url)) % 10**6}]}
+                r = fetch_mod.Result(source=s, payload=payload, status=200)
+                if kw.get("on_result"):
+                    kw["on_result"](r)
+                out.append(r)
+            return out
+
+        cli.fetch_all = fake
+        try:
+            p = cli.build_parser()
+            args = p.parse_args([
+                "-c", str(root / "config.yaml"), "scan", "--no-open",
+                "--no-caffeine", "--db", str(root / "j.db"),
+                "--state", str(root / "state" / "seen.json"),
+                "-o", str(root / "out")])
+            cli.cmd_scan(args)
+        finally:
+            cli.fetch_all = real
+            cli.CHECKPOINT_EVERY = real_every
+
+        import sqlite3
+        con = sqlite3.connect(root / "j.db")
+        stored = con.execute("SELECT COUNT(*) FROM roles").fetchone()[0]
+        con.close()
+        self.assertEqual(stored, n_boards,
+                         "postings went missing between two checkpoint slices")
+
+
 if __name__ == "__main__":
     unittest.main()
