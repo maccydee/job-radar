@@ -35,10 +35,31 @@ def test_the_message_does_not_promise_more_than_it_delivers():
     which on macOS needs `pmset disablesleep`: undocumented, system wide, and
     needing a password this tool will not ask for. A message saying "your
     machine will stay awake" is a lie the first time somebody shuts the lid.
+
+    Both halves are pinned, and the environment with them. This asserted the
+    warning unconditionally and so depended on the machine it ran on: it
+    passed on CI and failed on a Mac where `pmset disablesleep 1` had been
+    set, because there the warning is the false statement and the message
+    correctly stops making it. A test whose verdict turns on the developer's
+    power settings is not testing the code.
     """
-    held = awake.describe(True)
+    from unittest import mock
+
+    with mock.patch.object(awake, "sleep_disabled", return_value=False):
+        held = awake.describe(True)
     assert "lid" in held.lower(), held
     assert "lid will still stop it" in held, held
+
+    # And the opposite machine, where that warning would be the lie.
+    with mock.patch.object(awake, "sleep_disabled", return_value=True):
+        never = awake.describe(True)
+    assert "will not stop it" in never, never
+
+    # "Cannot tell" keeps the caution: an unverified promise that a scan
+    # survives the lid is how an hour gets lost.
+    with mock.patch.object(awake, "sleep_disabled", return_value=None):
+        unsure = awake.describe(True)
+    assert "lid will still stop it" in unsure, unsure
 
 
 def test_the_assertion_is_dropped_on_the_way_out():

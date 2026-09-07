@@ -14,8 +14,16 @@ here the assertion lives and dies with a process.
 the machine falling asleep on its own while nobody touches it. It does not
 stop a laptop sleeping when the lid is closed. On macOS that needs
 `pmset disablesleep`, which is undocumented, system wide and needs a password,
-and this tool is not going to ask for one. Closing the lid will still end the
-scan, and the message the user sees says so rather than implying otherwise.
+and this tool is not going to ask for one. Closing the lid will normally end
+the scan, and the message the user sees says so rather than implying
+otherwise.
+
+Normally, not always: somebody who HAS set `disablesleep` has a machine that
+does not sleep on the lid either, and telling them their scan is about to die
+is a false warning that costs them a scan they would otherwise have left
+running. So the message reads the setting rather than asserting a default. If
+it cannot read it, it keeps the warning, because a promise this tool cannot
+check is worse than a caution somebody can ignore.
 """
 
 from __future__ import annotations
@@ -134,14 +142,53 @@ class keep_awake:
         return False
 
 
+def sleep_disabled() -> bool | None:
+    """Whether this machine is set never to sleep at all.
+
+    True, False, or None for "cannot tell", which is a third answer and not a
+    quiet False. On macOS `pmset -g` reports `SleepDisabled 1` when somebody
+    has run `sudo pmset disablesleep 1`; on that machine the lid does nothing
+    and a scan survives it.
+
+    Never raises and never blocks for long. This is called to choose the
+    wording of one sentence, and a scan must not fail or hang because a
+    diagnostic command did.
+    """
+    if sys.platform != "darwin":
+        return None
+    exe = shutil.which("pmset") or "/usr/bin/pmset"
+    if not os.path.exists(exe):
+        return None
+    try:
+        out = subprocess.run([exe, "-g"], capture_output=True, text=True,
+                             timeout=5).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) >= 2 and parts[0] == "SleepDisabled":
+            return parts[1] == "1"
+    # The key is only printed when it has been set, so its absence is a real
+    # answer on macOS rather than an unreadable one.
+    return False
+
+
 def describe(held: bool) -> str:
     """One line for the user, and an honest one.
 
     A message saying "your machine will stay awake" would be a lie the first
-    time somebody shuts the lid, so this says what is actually true.
+    time somebody shuts the lid, so this says what is actually true, which
+    means reading the setting rather than assuming the default.
     """
-    if held:
-        return ("Your machine will not fall asleep on its own while this runs. "
-                "Closing the lid will still stop it.")
-    return ("This machine has no way to stay awake on request, so a scan will "
-            "stop if it sleeps.")
+    if not held:
+        return ("This machine has no way to stay awake on request, so a scan "
+                "will stop if it sleeps.")
+    if sleep_disabled() is True:
+        # `disablesleep` is system wide, so the lid is covered too.
+        return ("Your machine will not fall asleep on its own while this runs, "
+                "and it is set never to sleep at all, so closing the lid will "
+                "not stop it either.")
+    # False and None both keep the caution. An unverified promise that a scan
+    # survives the lid is how somebody loses an hour.
+    return ("Your machine will not fall asleep on its own while this runs. "
+            "Closing the lid will still stop it.")
