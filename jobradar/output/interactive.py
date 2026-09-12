@@ -441,8 +441,13 @@ document.querySelectorAll('.chips button').forEach(b=>b.onclick=()=>{
 // Ranking spends tokens, so the click shows the cost and waits for a yes.
 // Everything else that spends in this tool works the same way.
 const rankBtn=$('#rank'), rankInfo=$('#rankinfo');
+// Ranks what the Country filter shows, so a UK board is not charged for the
+// American roles sitting beside it. The estimate asks with the same country.
+function rankCountries(){ return (typeof country==='string' && country) ? [country] : []; }
 async function rankState(){
-  const r=await fetch('/api/rank'); if(!r.ok) return null;
+  const c=rankCountries();
+  const r=await fetch('/api/rank'+(c.length?'?country='+encodeURIComponent(c[0]):''));
+  if(!r.ok) return null;
   return r.json();}
 const stopBtn=$('#rankstop');
 function mmss(t){const m=Math.floor(t/60),s=t%60;
@@ -479,7 +484,8 @@ async function refreshRankInfo(){
     // ranked", while a quarter of the board carried no score at all because
     // those postings have no description to judge fit against.
     const bits=[];
-    if(d.pending) bits.push(`${d.pending} to rank`);
+    const where=rankCountries().length ? ` in ${rankCountries()[0]}` : '';
+    if(d.pending) bits.push(`${d.pending} to rank${where}`);
     if(d.scored) bits.push(`${d.scored} ranked`);
     if(d.unrankable) bits.push(`${d.unrankable} listing-only, nothing to rank`);
     rankInfo.textContent = bits.join(' · ');
@@ -506,14 +512,17 @@ setInterval(()=>{ if(_rank && _rank.state==='running'){ _tick++; paintRank(_rank
 
 rankBtn.onclick=async ()=>{
   const d=await rankState(); if(!d) return;
-  if(!d.pending){ say('Everything with a description is already ranked'); return; }
+  const cs=rankCountries(), where=cs.length ? ` in ${cs[0]}` : '';
+  if(!d.pending){ say(`Everything${where} with a description is already ranked`); return; }
   const ok=confirm(
-    `Rank ${d.pending} roles against your CV?\n\n`+
+    `Rank ${d.pending} roles${where} against your CV?\n\n`+
     `About ${d.tokens.toLocaleString()} input tokens, in ${d.batches} call(s).\n`+
     `Screening them one at a time would be about `+
-    `${d.screen_tokens.toLocaleString()}.`);
+    `${d.screen_tokens.toLocaleString()}.`+
+    (cs.length && d.unplaced ? `\n\n${d.unplaced} more have no single country `+
+      `and are left unranked.` : ''));
   if(!ok) return;
-  const {ok:started,data}=await post('/api/rank',{});
+  const {ok:started,data}=await post('/api/rank',{countries:cs});
   if(!started){ say(data.error||'could not start'); return; }
   say('Ranking started. This takes a couple of minutes.');
   const t=setInterval(async ()=>{
@@ -539,7 +548,7 @@ if(pullBtn) pullBtn.onclick=async ()=>{
   } else { pullBtn.disabled=false; pullBtn.textContent='Pull'; }
 };
 
-$('#fcountry').onchange=e=>{country=e.target.value;apply()};
+$('#fcountry').onchange=e=>{country=e.target.value;apply();refreshRankInfo()};
 $('#fcity').onchange=e=>{city=e.target.value;apply()};
 
 async function post(url,body){

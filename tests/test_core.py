@@ -6845,7 +6845,7 @@ def test_the_rank_button_recovers_from_a_worker_that_raises_systemexit():
         # Run the worker body on this thread, which is what `_spawn_rank`
         # hands to `threading.Thread`.
         with mock.patch("jobradar.rank.rank", explode), \
-             mock.patch("jobradar.rank.candidates", lambda con, refresh=False: []), \
+             mock.patch("jobradar.rank.candidates", lambda con, refresh=False, countries=None: []), \
              mock.patch("jobradar.config.load", lambda *a, **k: _cfg()), \
              mock.patch("threading.Thread") as thread:
             serve_mod._spawn_rank(str(db), None)
@@ -6893,7 +6893,7 @@ def test_a_partly_written_rank_run_is_not_reported_as_nothing_written():
         raise e
 
     with mock.patch("jobradar.rank.rank", explode), \
-         mock.patch("jobradar.rank.candidates", lambda con, refresh=False: []), \
+         mock.patch("jobradar.rank.candidates", lambda con, refresh=False, countries=None: []), \
          mock.patch("jobradar.config.load", lambda *a, **k: _cfg()), \
          mock.patch("threading.Thread") as thread:
         serve_mod._spawn_rank(str(db), None)

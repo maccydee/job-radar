@@ -414,21 +414,51 @@ def _parse(stdout: str) -> list:
     return fallback if fallback is not None else []
 
 
-def candidates(con, refresh: bool = False) -> list:
-    """Roles worth spending a triage token on.
-
-    Only ones with a description: a LinkedIn listing carries a title, a company
-    and nothing else, and scoring those would be scoring the title, which the
-    filters already did for free.
-    """
-    store._ensure_columns(con)
+def _rankable_sql(refresh: bool) -> str:
     q = ("SELECT r.* FROM roles r LEFT JOIN role_state s ON s.uid=r.uid "
          "WHERE COALESCE(s.status,'new') NOT IN "
          "('rejected','withdrawn','skipped','closed') "
          f"AND {store.LIVE_SQL} AND LENGTH(TRIM(COALESCE(r.description,'')))>=200")
     if not refresh:
         q += " AND COALESCE(r.fit,-1) < 0"
-    return con.execute(q + " ORDER BY r.score DESC").fetchall()
+    return q
+
+
+def candidates(con, refresh: bool = False, countries=None) -> list:
+    """Roles worth spending a triage token on.
+
+    Only ones with a description: a LinkedIn listing carries a title, a company
+    and nothing else, and scoring those would be scoring the title, which the
+    filters already did for free.
+
+    `countries` spends a run on one board rather than all of it. Asked for on
+    12 September 2026, when a UK-only search had 828 UK roles sitting beside
+    4,272 American ones and the only way to rank the UK ones was to pay for
+    both. `unknown` is the dashboard's name for a blank country and selects
+    exactly those. A role in several countries, or in none that could be read,
+    is not in any list and stays unranked; `unplaced` counts them, so a caller
+    can say they were left rather than let them read as outside the country.
+    """
+    store._ensure_columns(con)
+    q, params = _rankable_sql(refresh), []
+    if countries:
+        codes = [c for c in countries if c != "unknown"]
+        conds = []
+        if codes:
+            conds.append(f"r.country IN ({','.join('?' * len(codes))})")
+            params += codes
+        if "unknown" in countries:
+            conds.append("COALESCE(r.country,'')=''")
+        q += " AND (" + " OR ".join(conds) + ")"
+    return con.execute(q + " ORDER BY r.score DESC", params).fetchall()
+
+
+def unplaced(con, refresh: bool = False) -> int:
+    """Rankable roles no single-country run would pick up: blank or several."""
+    store._ensure_columns(con)
+    q = _rankable_sql(refresh).replace("SELECT r.*", "SELECT COUNT(*) c", 1)
+    q += " AND (COALESCE(r.country,'') IN ('','multiple'))"
+    return con.execute(q).fetchone()["c"]
 
 
 def _apply(con, chunk, out) -> int:

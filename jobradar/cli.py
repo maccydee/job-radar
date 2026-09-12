@@ -2263,7 +2263,24 @@ def cmd_rank(args) -> int:
     cfg = _cfg_or_default(args.config)
     con = store.connect(args.db, must_exist=True)
     try:
-        rows = rank_mod.candidates(con, refresh=args.refresh)
+        countries = None
+        if getattr(args, "country", None):
+            # The same normaliser as `locations.countries`, so GB, uk and
+            # United Kingdom all mean the UK the roles are filed under.
+            from .config import ConfigError, _countries
+            try:
+                countries = _countries(args.country, "--country")
+            except ConfigError as e:
+                _say(str(e))
+                return 2
+        rows = rank_mod.candidates(con, refresh=args.refresh,
+                                   countries=countries)
+        if countries:
+            left = rank_mod.unplaced(con, refresh=args.refresh)
+            if left:
+                _say(f"  {left} role(s) with no single country (blank, or open "
+                     f"in several) are left unranked. They are not outside "
+                     f"{', '.join(countries)}, just not known to be in it.")
         if not rows:
             _say("Nothing to rank. Every role with a description already has a "
                  "fit score; use --refresh to score them again.")
@@ -2914,6 +2931,9 @@ def build_parser() -> argparse.ArgumentParser:
     rk.add_argument("--top", type=int, default=12, help="how many to print")
     rk.add_argument("--dry-run", action="store_true",
                     help="show what it would cost and send nothing")
+    rk.add_argument("--country", action="append", default=None,
+                    help="rank only roles in this country, e.g. --country UK. "
+                         "Repeat it for more than one.")
     rk.add_argument("--db", default=None, help=_DB_HELP)
     rk.set_defaults(func=cmd_rank)
 

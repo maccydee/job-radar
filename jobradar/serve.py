@@ -194,11 +194,18 @@ class Handler(BaseHTTPRequestHandler):
             # click has to be able to show a cost before spending anything.
             con = store.connect(self.db_path)
             try:
+                from urllib.parse import parse_qs
                 from . import rank as rank_mod
-                rows = rank_mod.candidates(con)
+                # The estimate follows the country the board is filtered to,
+                # so the cost the click shows is the cost of what it will rank.
+                countries = [c for c in parse_qs(urlparse(self.path).query)
+                             .get("country", []) if c]
+                rows = rank_mod.candidates(con, countries=countries or None)
                 batches, tokens = rank_mod.estimate(rows)
                 return self._json({
                     "pending": len(rows), "batches": batches, "tokens": tokens,
+                    "countries": countries,
+                    "unplaced": rank_mod.unplaced(con) if countries else 0,
                     "screen_tokens": len(rows) * rank.SCREEN_TOKENS,
                     "state": store.get_meta(con, "rank_state", "idle"),
                     "done": max(
@@ -540,8 +547,16 @@ class Handler(BaseHTTPRequestHandler):
                 # exists to undo.
                 try:
                     from . import rank as rank_mod
+                    countries = data.get("countries") or None
+                    if countries is not None and not (
+                            isinstance(countries, list)
+                            and all(isinstance(c, str) for c in countries)):
+                        store.release(con, "rank")
+                        return self._json(
+                            {"ok": False, "error": "bad countries"}, 400)
                     rows = rank_mod.candidates(
-                        con, refresh=bool(data.get("refresh")))
+                        con, refresh=bool(data.get("refresh")),
+                        countries=countries)
                     if not rows:
                         store.release(con, "rank")
                         return self._json(
@@ -568,7 +583,7 @@ class Handler(BaseHTTPRequestHandler):
             finally:
                 con.close()
             _spawn_rank(self.db_path, self.config_path,
-                        refresh=bool(data.get("refresh")))
+                        refresh=bool(data.get("refresh")), countries=countries)
             return self._json({"ok": True, "roles": len(rows)})
 
         if path == "/api/generate/bulk":
@@ -692,7 +707,8 @@ def _abandon_rank(con, error: str = "") -> None:
         pass
 
 
-def _spawn_rank(db_path, config_path, refresh: bool = False) -> None:
+def _spawn_rank(db_path, config_path, refresh: bool = False,
+                countries=None) -> None:
     """Rank on a background thread so the click returns at once.
 
     Progress goes in `meta` rather than a job row: ranking is about the board
@@ -721,7 +737,9 @@ def _spawn_rank(db_path, config_path, refresh: bool = False) -> None:
             raise
         try:
             cfg = load_cfg(config_path) if config_path else load_cfg()
-            rows = rank_mod.candidates(con, refresh=refresh)
+            # The same filter the click was priced with. Without it the button
+            # would show the UK count and then rank the whole board.
+            rows = rank_mod.candidates(con, refresh=refresh, countries=countries)
             rank_mod.rank(
                 con, cfg, rows,
                 on_batch=lambda done, total, scored:
