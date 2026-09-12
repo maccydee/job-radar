@@ -6,7 +6,8 @@ name: validate sources
 #
 # Runs weekly, checks every bundled source is alive and is still the company it
 # claims to be, and opens a pull request when something has changed. Nothing is
-# removed without a human merging it.
+# removed without a human merging it. A week with nothing to remove commits the
+# checked date and the emptiness log straight to main, since it deletes nothing.
 #
 # This is the only unattended job here that deletes anything, so read the
 # guards below before changing them. There are four, and they are in different
@@ -78,7 +79,18 @@ jobs:
 
           r = json.load(open("out/validation.json", encoding="utf-8"))
           rows = r.get("rows") or []
-          dead = r.get("dead") or []
+          # `dead` in the report is every board that answered with nothing
+          # open today. What is about to be DELETED is `pruned`: a board has
+          # to stay empty for weeks first (jobradar/deadwood.py), so the two
+          # differ, by hundreds on the first runs after that rule landed.
+          # Everything below that decides whether to delete keys on `pruned`.
+          empty = r.get("dead") or []
+          pruned = r.get("pruned")
+          # A report without the field came from a validate that predates it.
+          # "Cannot say what it would delete" must never read as "deletes
+          # nothing", so that refuses.
+          no_claim = pruned is None
+          dead = pruned or []
           mismatch = r.get("mismatch") or []
           unreachable = [x for x in rows if x.get("verdict") == "unreachable"]
           transport = [x for x in rows if x.get("transport")]
@@ -99,18 +111,24 @@ jobs:
           # a pull request deleting four thousand employers. Weekly attrition
           # on a list this size is tens, not hundreds.
           CAP = 250
-          refuse = bool(unsafe) or len(dead) > CAP
+          refuse = no_claim or bool(unsafe) or len(dead) > CAP
 
           out = []
           out.append("## Source validation\n")
           out.append(f"- checked: **{r['total']}**")
-          out.append(f"- dead (answered, no postings): **{len(dead)}**")
+          out.append(f"- empty today (answered, no postings): **{len(empty)}**")
+          out.append(f"- empty, not yet for long enough to delete: **{r.get('waiting', 0)}**")
+          out.append(f"- to be removed: **{len(dead)}**")
           # Never shown before, which meant a run where nine thousand boards
           # could not be read looked exactly like a clean one.
           out.append(f"- unreachable (left alone): **{len(unreachable)}**")
           out.append(f"- TLS handshake failures (never prunable): **{len(transport)}**")
           out.append(f"- identity mismatch: **{len(mismatch)}**\n")
-          if unsafe:
+          if no_claim:
+              out.append("### Refusing to commit anything\n")
+              out.append("The report does not say which boards the prune removed, "
+                         "so there is no claim to check the diff against.\n")
+          elif unsafe:
               out.append("### Refusing to open a pull request\n")
               out.append(f"{len(unsafe)} row(s) queued for deletion are not safe "
                          "to delete. A board that could not be reached is not a "
@@ -121,12 +139,12 @@ jobs:
               out.append("")
           elif len(dead) > CAP:
               out.append("### Refusing to open a pull request\n")
-              out.append(f"{len(dead)} dead of {r['total']} is above the cap of "
+              out.append(f"{len(dead)} to remove of {r['total']} is above the cap of "
                          f"{CAP}. That many boards do not die in a week: this is "
                          "a platform change or a throttled runner. Nothing was "
                          "committed. Re-run it, or run it from a laptop.\n")
           if dead:
-              out.append("### Dead\n")
+              out.append("### To be removed\n")
               for d in dead[:60]:
                   out.append(f"- `{d['company']}`, {d['url']}")
           if mismatch:
@@ -159,7 +177,11 @@ jobs:
         # removal be exactly the number the title claims, which catches a
         # stale branch, a bad merge, a truncated write, and anything else that
         # makes the diff disagree with the sentence describing it.
-        if: steps.sum.outputs.dead != '0' && steps.sum.outputs.refuse != 'true'
+        #
+        # It runs on a clean week too, where the claim is zero, because a
+        # clean week now commits as well (next step) and "removes nothing"
+        # is a claim like any other.
+        if: steps.sum.outputs.refuse != 'true'
         run: |
           git show "origin/$BASE_BRANCH:sources/sources.json" > /tmp/base.json
           python3 - <<'EOF'
@@ -184,6 +206,43 @@ jobs:
           # caught this line.
           DEAD: ${{ steps.sum.outputs.dead }}
           BASE_BRANCH: ${{ github.event.repository.default_branch }}
+
+      - name: Record a clean check
+        # A week with nothing to delete still has to land upstream. This step
+        # did not exist: the job committed only when it pruned, so a clean run
+        # changed nothing, `meta.checked` stayed where it was, and every
+        # dashboard reported the list as unchecked since 25 August while it
+        # was being checked. With the rule that a board must stay empty for
+        # weeks, nothing to delete is the NORMAL week, and it is exactly the
+        # week whose emptiness log has to be kept. Dropped, no board ever
+        # reaches the thresholds and the prune never happens.
+        #
+        # Straight to the default branch rather than a pull request, because
+        # nothing is removed, and the step above has just proved it: the net
+        # removal had to equal the claim, and the claim is zero.
+        if: steps.sum.outputs.dead == '0' && steps.sum.outputs.refuse != 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sources/sources.json sources/empty-since.json
+          if git diff --cached --quiet; then
+            echo "nothing changed"
+            exit 0
+          fi
+          git commit -m "sources: checked $(date -u +%Y-%m-%d), nothing to prune"
+          # `pushed` records whether any attempt worked, so three rejected
+          # pushes cannot exit with the status of `sleep`.
+          pushed=
+          for i in 1 2 3; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then pushed=yes; break; fi
+            echo "push rejected, rebasing (attempt $i)"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || exit 1
+            sleep 3
+          done
+          if [ -z "$pushed" ]; then
+            echo "::error::the check was committed on the runner but could not be pushed after 3 attempts, so the source list still reads as unchecked."
+            exit 1
+          fi
 
       - name: Open a pull request
         if: steps.sum.outputs.dead != '0' && steps.sum.outputs.refuse != 'true'
@@ -259,7 +318,7 @@ jobs:
 
           The usual causes:
 
-          1. It refused to prune. Either more than 250 boards came back empty, or a row queued for deletion had a transport failure against it. Both mean a throttled runner or a platform change, not that many employers died in a week.
+          1. It refused to prune. Either more than 250 boards were due for deletion, or a row queued for deletion had a transport failure against it. Both mean a throttled runner or a platform change, not that many employers died in a week.
           2. It ran past its 300 minute step limit. The list is 17,810 entries and apply.workable.com alone is a 50 minute floor.
 
           The source list is unchanged either way. This issue is filed once per failed run and is safe to close." \

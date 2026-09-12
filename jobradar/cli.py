@@ -1989,6 +1989,21 @@ def cmd_validate(args) -> int:
                 _say(f"    {r['company'][:30]:32} {log.why_kept(r['url'])}")
             if len(waiting) > 5:
                 _say(f"    ... and {len(waiting) - 5} more")
+        if args.report:
+            # Rewritten with what the prune will REMOVE, beside what merely
+            # came back empty. Those were one list until an empty board had to
+            # stay empty for weeks, and the weekly job still read `dead` as
+            # the deletion list. On 7 September 348 boards came back empty,
+            # over its cap of 250, so it refused and committed nothing. Under
+            # the waiting rule that refusal would repeat every Sunday while
+            # deleting nothing, and it would also throw away the emptiness log
+            # that is the only way a board ever becomes deletable.
+            atomic_write_text(Path(args.report), json.dumps({
+                "checked": datetime.now().isoformat(timespec="seconds"),
+                "total": len(rows), "dead": dead, "mismatch": mismatch,
+                "rows": rows, "pruned": prunable_rows,
+                "waiting": len(waiting),
+            }, indent=1))
         dead_urls = {r["url"] for r in prunable_rows}
         keep = [s for s in srcs if s.url not in dead_urls]
         src_mod.save(keep, args.file, meta={"pruned": len(srcs) - len(keep),
