@@ -1,0 +1,2313 @@
+{
+ "min_days": 21,
+ "min_runs": 3,
+ "sources": {
+  "https://9elements.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://aamc.wd5.myworkdayjobs.com/wday/cxs/aamc/AAMC/jobs": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://adhese.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://administrative-usta.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://advance-financial.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://agile-robots-se.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://akumincorp.wd5.myworkdayjobs.com/wday/cxs/akumincorp/elitecareers/jobs": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://alarm-guard-security-services-inc.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://antenne-deutschland.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/alephalpha?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/allminds?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/altruistiq?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/anara?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/beacons?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/billie?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/bitstack?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/blockhouse?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/cointracker?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/console?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/cow-dao?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/craftdocs?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/deeptune?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/ecosia.org?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/egra?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/electric?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/ethglobal?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/feldera?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/fence-masters-inc?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/findanomaly?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/fnatic?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/goodship?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/heymilo?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/hubstaff?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/i6?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/jitter-video?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/koyfin?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/lottie?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/lua?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/lumen.energy?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/media-mogul?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/movement?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/nimbl?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/nosisbio?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/openhomefoundation?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/optimum?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/opus1?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/passes?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/plasiv?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/publiccloudgroup?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/qawolf?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/rewst?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/sellfire?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/sentient?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/spare?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/spherical?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/stndrd?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/superplane?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/thrive-alliance-group?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/vantheon?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/vend-park?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/vivian-health?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/volley-automation?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/vyn?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/wa.technology?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/withco?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.ashbyhq.com/posting-api/job-board/zego?includeCompensation=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.smartrecruiters.com/v1/companies/americanmontessorisociety/postings?limit=100": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.smartrecruiters.com/v1/companies/burhaniengineers/postings?limit=100": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.smartrecruiters.com/v1/companies/collistarbeneluxbv/postings?limit=100": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.smartrecruiters.com/v1/companies/ihstowers/postings?limit=100": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.smartrecruiters.com/v1/companies/insightsoftware/postings?limit=100": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.smartrecruiters.com/v1/companies/labormobilitypartnerships/postings?limit=100": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.smartrecruiters.com/v1/companies/omio1/postings?limit=100": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.smartrecruiters.com/v1/companies/sourcebioscience/postings?limit=100": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.smartrecruiters.com/v1/companies/transitionalcaremanagement/postings?limit=100": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://api.smartrecruiters.com/v1/companies/voyagepriv/postings?limit=100": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apoverlag.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/6figurecreative?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/a-more-perfect-union-the-jewish-partnership-for-democracy?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/abzorbagames?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/action-against-hunger?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/acusensus-new-zealand?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/agile-robots?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/alcemy?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/allego-1?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/alvariumbeer?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/ammortal?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/apothekary?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/appliedblockchain?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/arcos?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/asi-student-government?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/atheer-act?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/athens-technology-center-1?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/bacr?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/bbc-maestro?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/bettersleep?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/beyondpetrochemicals?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/blue-sky-utility?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/bmarkostructures?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/brightrockgames?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/cachefly?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/canopie?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/canvas8?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/carbonplan?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/cbo-group?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/chirocat?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/ciff?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/citizens-state-bank?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/commonapp?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/conflux?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/crowd-favorite?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/curology?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/day30?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/dc-enterprises-career?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/decision-foundry?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/drool?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/dstillery?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/echo360-inc?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/elementlpower?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/environment-bank?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/findevcanada?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/foodsysteminnovations?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/futurlab-ltd?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/gables-of-fitchburg?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/genus-ai?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/getbits?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/giz-kamerun?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/glass-research?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/gocertify?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/grahamand-brown?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/green-led-lighting-solutions?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/greenbelt-alliance?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/haiqu-inc?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/halcyon-2?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/healthcare-central-london?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/hello-sunshine?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/hi-auto?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/horizontal-talent?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/hrrethought?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/huddle-education?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/hy-studio-gmbh-1?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/infatica-dot-i-o?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/intersog-na?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/iosh?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/ldms?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/lifthium-energy?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/love-strategies-inc?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/mavtek?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/micro-bit-educational-foundation?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/mission-44?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/mosaic-media?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/navro?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/neurolabs?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/newton-media-group?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/novasign?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/nuclera?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/nynn?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/omass-therapeutics?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/outperform-2?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/pacifica-beauty?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/people-in-need-2?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/peoplepowered?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/progressive-robotics?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/pronexus-1?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/roadpass-digital-1?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/scrambly?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/ss-tech-holdings-limited?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/superlogic-bookit?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/urgent-action-fund-fa?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/voxology-inc?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/we-planet?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/westfalia-fruit?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/whiteboardadvisors?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/wisedocs-ai?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://apply.workable.com/api/v1/widget/accounts/word-is-bond?details=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://autotiv.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://avaaz.pinpointhq.com/postings.json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://awardspring.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://bankbtn-hcis-iaadnf.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://bb.wd3.myworkdayjobs.com/wday/cxs/bb/Student/jobs": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://black-men-talk-tech.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://blue-marine-foundation.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://blueforest.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://bluetread.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/agilesix/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/americanmarketingassociation/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/audioeye/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/benchprep/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/bescareers/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/cadrehospice/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/cavnue/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/ccahremote/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/cdbabyjobs/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/civitaslearning/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/claros/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/companycam/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/datasocietyresearchinstitute/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/documocareers/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/doubleverify/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/dsi/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/dunnorthodontics/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/emergingtalent/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/emplifimonster/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/energyimpactpartnerslp/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/espirita/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/eumaterialbank/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/everagtester/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/expertnetwork/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/eyeo/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/faf/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/figment/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/fixify/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/foliahealth/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/fwdus/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/gather/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/generalcatalyst/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/girleffect/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/globalfishingwatch/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/globalfishingwatchrfp/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/godfreydadichpartners/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/grassrootsanalytics/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/hlb90067/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/infotrust/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/intecrowd/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/inyova/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/irely/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/iterrasolutions/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/jackpot/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/kiavi/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/kronosresearch/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/legatosecurity/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/lirio/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/liscinternships/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/ltse/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/luckybeverageco/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/manychat/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/medium/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/metro/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/mishimoto/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/momogood/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/monomipark/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/mx51/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/naturesbakery/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/nearfoundation/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/ngmbiopharmaceuticals/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/ninjatradercontractors/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/ora/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/phantomai/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/pinnacolassurance/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/postmanlaw/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/powertodecide/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/prescriberpoint/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/quansight/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/questbridge/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/rajasthanroyals/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/recruitingprograms/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/renaissancelearning-emea/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/sandstonecarecastlerock/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/scalespace/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/securitize/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/sfox/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/solera/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/synthetaic/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/tefron/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/tes/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/thinkonward/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/threatlocker/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/tippingpointcommunity/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/tmc/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/toastmastersinternational/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/transactlyconnect/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/verygoodventures/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/vgw/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/vogliodigitalmarketing/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/waltzhealth/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/wizardcommerce/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/yalochatinc/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://boards-api.greenhouse.io/v1/boards/zephyrhome/jobs?content=true&pay_transparency=true": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://bookboost.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://bridgepoint-bible.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://cairo-ag.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://cal-com.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://cambrium.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://carbonhound-inc.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careercenter-boston.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-aeieng.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-albania-titanmaterials.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-altadis.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-aquawaveswimschool.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-bradfordexchange.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-bridgenext.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-calamp.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-cedarfallsutilities.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-coegipartners.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-familyauto.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-grandviewhealth.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-harrison-ymca.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-hospiceofnewmexico.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-leons.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-michfb.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-oregonlottery.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-qchek.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-uabmedicine.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-wrenchgroup.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers-yusa-ymca.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://careers.agthia.com/search/?q=&sortColumn=referencedate&sortDirection=desc": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://ccchurch.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://cineville-bv.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://city-boston.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://climate-policy-radar.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://climatepartner-gmbh.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://coloradokids.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://companisto.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://connexio-health-llc.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://crodu.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://cticc.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://davidsystems.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://deako.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://deanhouston.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://deca-games.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://desert-of-maine.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://disruptive-advertising.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://domestic-aeieng.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://earlycareers-penningtonslaw.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://ectf.fa.us2.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://edyo.fa.us2.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://encorestate-plans.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://enno.fa.ap1.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://enpicom.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://entyre.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://epic-cleantec.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://eppdata.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://erichpommerinstitut.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://erlebe-fernreisen.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://etel-transformers.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://etiqa-srl.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://external-array.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://fa-epec-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://fa-eryf-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://fa-eskj-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://fa-etwa-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://fa-eugs-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://fa-ewdf-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://fa-ewnz-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://fa-ewzx-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://fa-exby-saasfaprod1.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://factal.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://fatturaelettronicapa.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://field-hourlycareers-luckystrikeentertainment.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://flatpay.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://forvis.avature.net/experiencedcareers/SearchJobs/?jobRecordsPerPage=50": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://franklintempleton.wd5.myworkdayjobs.com/wday/cxs/franklintempleton/Primary-External-1/jobs": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://freiwilligendienste-drs.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://gaycenter.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://giftify.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://global-fund-for-children.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://gpvsweden.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://graduate-uk-dunbia.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://gtowizard.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://gwzo.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://hdbc.fa.em2.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://healthy-gamer.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://iaahnf.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://ibanqy.fa.ocs.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&expand=requisitionList.secondaryLocations&finder=findReqs;siteNumber=CX_1,limit=200,sortBy=POSTING_DATES_DESC": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://ico.wd3.myworkdayjobs.com/wday/cxs/ico/ICO/jobs": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://iec.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://indeedapply-suburbanpropane.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://indivi.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://integral-uk.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://international-daddario.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://international-synchronoss.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://iwbi.pinpointhq.com/postings.json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://jdee-transport-services.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://jobs-iamempowered.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://jobs-the-long-drink-company.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://jobs.jobvite.com/conair/jobs": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://jobs.jobvite.com/conexiom/jobs": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://jobs.jobvite.com/humble-bundle/jobs": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://jobs.jobvite.com/mncustom/jobs": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://jobs.jobvite.com/oreilly-media/jobs": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://jobs.kinross.com/search/?q=&sortColumn=referencedate&sortDirection=desc": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://jobsearch.harman.com/en_US/examplePathName/SearchJobs/?jobRecordsPerPage=50": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://kimlundgrenassociatesinc.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://kingfluencers-ag.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://kiron.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://komodowellbeing.teamtailor.com/jobs.rss?per_page=200": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://kosys.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://l1vegmbh.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://layerscaleadvisory.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://lseg.wd3.myworkdayjobs.com/wday/cxs/lseg/Graduate_Careers/jobs": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://lumerate.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://made-media.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://managementcareers-luckystrikeentertainment.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://medecinssansfrontiereswaca.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://mercadona.avature.net/es_ES/Careers/SearchJobs/?jobRecordsPerPage=50": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://metrocaring.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://milestone-business-solutions-inc.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://mtheory.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://myside.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://namecheap.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://nc-100.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://nordcloud-career.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://nuru.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://ocean-visions.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://orderfox.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://ory.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://out-of-the-box.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://outa.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://pacmed.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://parentpossible.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://payquad.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://peopleforpeople.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://pepsicoglobalpontoon.avature.net/careers/SearchJobs/?jobRecordsPerPage=50": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://peptone.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://picqer.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://playerexperience-usta.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://polaroid.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://portal.fritolayemployment.com/quakercareers/SearchJobs/?jobRecordsPerPage=50": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://prenosis.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://property-meld.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://provisioniam.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://qaamgo.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://quattron.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://rainforest-action-network.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://raum.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://red-rocks-church.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://reset-tech.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://resultstack.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://sandvik.wd3.myworkdayjobs.com/wday/cxs/sandvik/sigmanest-jobs/jobs": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://schweizerische-rheinhaefen.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://seasonalmlb-headfirstcamps.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://seenconnects-1743434611-seen-studios.teamtailor.com/jobs.rss?per_page=200": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://sharecompanygroup.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://simple-organic-beauty.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://smartnumbers.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://smith-hair-salon-llc.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://smyrna-police-department.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://soccer-shots-east-and-south-sd.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://solugen.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://south-african-graduate-employers-association.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://spektrix.pinpointhq.com/postings.json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://stack-influence.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://statusphere.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://storejobs-qchek.icims.com/jobs/search?ss=1&in_iframe=1": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://talents.hikma.com/search/?q=&sortColumn=referencedate&sortDirection=desc": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://taprootfoundation.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://tennet.avature.net/en_US/tobedeleted1/SearchJobs/?jobRecordsPerPage=50": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://theconsultusinternationalgroup.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://transact-campus.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://transcend-specialized-dentistry.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://tupl.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://varm.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://varnish-software.teamtailor.com/jobs.rss?per_page=200": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://viind.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://wagpco.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://websteronline.wd12.myworkdayjobs.com/wday/cxs/websteronline/AmetrosExternalCareerSite/jobs": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://wecreate-data-gmbh.jobs.personio.de/xml": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://welwonen.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://wiiw.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://xite.recruitee.com/api/offers/": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  },
+  "https://zwitterco.breezy.hr/json": {
+   "first_empty": "2026-09-12",
+   "last_empty": "2026-09-12",
+   "runs": 1
+  }
+ },
+ "updated": "2026-09-12T20:54:11",
+ "version": 1
+}

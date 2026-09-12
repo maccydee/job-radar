@@ -3,8 +3,9 @@
   "note": "employer boards discovered from Common Crawl's columnar index and verified live; keyword-driven platforms are templates expanded from your own titles",
   "version": 6,
   "validated": "2026-08-25",
-  "checked": "2026-08-25",
-  "boards": 17810
+  "checked": "2026-09-12",
+  "boards": 17810,
+  "pruned": 0
  },
  "sources": [
   {
