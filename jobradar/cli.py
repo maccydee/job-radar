@@ -19,6 +19,7 @@ import webbrowser
 from . import serve as serve_mod
 from .awake import describe, keep_awake
 from .config import Config, ConfigError, load as load_cfg
+from . import deadwood
 from .discover import discover as run_discover, prunable as row_prunable, validate_source
 from . import fetch as fetch_defaults
 from .fetch import (HostLimiter, detect_throttling, fetch_all,
@@ -1961,6 +1962,33 @@ def cmd_validate(args) -> int:
         if held:
             _say(f"  {held} source(s) read as dead but are not deletable "
                  f"(nothing reached the board), so they are kept.")
+
+        # And a board has to have been empty for WEEKS, not for one Sunday.
+        #
+        # Every "dead" row here says `no postings returned`: HTTP 200, board
+        # answered, nothing open that day. Re-checking a run five days later
+        # found roughly 8% of them serving jobs again, which is about 28 of
+        # 355 that would have been deleted while alive. A thirty-person
+        # employer between hires and an abandoned board return byte-identical
+        # answers, and no single reading can tell them apart. See
+        # `jobradar/deadwood.py`.
+        log = deadwood.EmptyLog(
+            Path(args.state_dir or deadwood.DEFAULT_DIR)
+            / deadwood.DEFAULT_NAME).load()
+        for r in rows:
+            log.record(r["url"], row_prunable(r))
+        log.forget_missing(s.url for s in srcs)
+        log.save()
+        waiting = [r for r in prunable_rows if not log.settled(r["url"])]
+        prunable_rows = [r for r in prunable_rows if log.settled(r["url"])]
+        if waiting:
+            _say(f"  {len(waiting)} empty board(s) are not deletable yet: an "
+                 f"empty board is a company with nothing open, not a dead "
+                 f"one, until it stays empty.")
+            for r in waiting[:5]:
+                _say(f"    {r['company'][:30]:32} {log.why_kept(r['url'])}")
+            if len(waiting) > 5:
+                _say(f"    ... and {len(waiting) - 5} more")
         dead_urls = {r["url"] for r in prunable_rows}
         keep = [s for s in srcs if s.url not in dead_urls]
         src_mod.save(keep, args.file, meta={"pruned": len(srcs) - len(keep),
@@ -2798,6 +2826,15 @@ def build_parser() -> argparse.ArgumentParser:
                    help="check only the first N sources. 0 checks all of "
                         "them.")
     v.add_argument("--prune", action="store_true", help="rewrite --file without dead sources")
+    v.add_argument("--state-dir", default=None,
+                   help="where the record of how long each board has been "
+                        "empty is kept (default sources/, tracked, so it "
+                        "survives between runs on a fresh checkout). A board "
+                        "is only "
+                        "deletable once it has answered empty on several "
+                        "separate runs over several weeks, because an empty "
+                        "board is usually a company with nothing open rather "
+                        "than a dead one.")
     v.add_argument("--force-prune", action="store_true",
                    help="prune even when most of the list came back empty, "
                         "which normally means the network is the problem")

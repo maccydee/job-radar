@@ -194,7 +194,15 @@ jobs:
           # the working tree cannot smuggle it into the commit. out/ holds the
           # full report and is gitignored, but an ignore rule is not a reason
           # to widen this.
-          add-paths: sources/sources.json
+          # The emptiness log travels with the prune it justifies. Without
+          # it committed, a fresh runner starts with no history every Sunday,
+          # no board ever reaches the thresholds, and nothing is ever pruned:
+          # a guard that never lets anything through is a broken prune, just
+          # quieter. Committed, the evidence is in the diff, and a reviewer
+          # can see "empty since 4 August" rather than taking this on trust.
+          add-paths: |
+            sources/sources.json
+            sources/empty-since.json
           title: "Prune ${{ steps.sum.outputs.dead }} dead source(s)"
           body: |
             Weekly source validation. Every bundled board was fetched and

@@ -70,7 +70,11 @@ def _source_file(tmp: Path, entries: list[dict]) -> Path:
 def _validate_args(tmp: Path, file: Path, **over) -> argparse.Namespace:
     args = argparse.Namespace(config=str(_config(tmp)), file=str(file),
                               limit=None, report=str(tmp / "report.json"),
-                              prune=False, force_prune=False)
+                              prune=False, force_prune=False,
+                              # Its own, so a test never reads or writes the
+                              # developer's real record of which boards have
+                              # been empty and for how long.
+                              state_dir=str(tmp / "state"))
     for k, v in over.items():
         setattr(args, k, v)
     return args
@@ -220,7 +224,28 @@ def test_prune_deletes_on_the_prunable_flag_and_not_on_the_verdict():
             entries += [{"company": f"Live {i}",
                          "url": f"{urls['live']}?{i}"} for i in range(8)]
             f = _source_file(tmp, entries)
-            cli.cmd_validate(_validate_args(tmp, f, prune=True))
+            args = _validate_args(tmp, f, prune=True)
+
+            # `Gone` has to have been empty for weeks before anything will
+            # delete it, so give it that history. An empty board is a company
+            # with nothing open until it stays empty: measured on a real run,
+            # about 8% of boards called dead on one Sunday were serving jobs
+            # five days later. See jobradar/deadwood.py.
+            #
+            # Seeded rather than asserted away, because what THIS test is
+            # about is the other row: a board nobody could reach must survive
+            # the prune however its verdict reads.
+            from datetime import date, timedelta
+            from jobradar import deadwood
+            log = deadwood.EmptyLog(Path(args.state_dir) / deadwood.DEFAULT_NAME)
+            for back in (60, 40, 20):
+                log.record(urls["gone"], True,
+                           when=(date.today() - timedelta(days=back)).isoformat())
+                log.record(urls["tls"], True,
+                           when=(date.today() - timedelta(days=back)).isoformat())
+            log.save()
+
+            cli.cmd_validate(args)
             left = json.loads(f.read_text(encoding="utf-8"))
     finally:
         cli.validate_source = real

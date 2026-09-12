@@ -329,9 +329,26 @@ def test_the_summary_says_how_many_boards_could_not_be_read():
 
 
 def test_the_prune_pull_request_only_touches_the_source_list():
+    """Anything wider could commit out/, a database, or a personal config.
+
+    Asserted as a set rather than as one exact string. The prune now also
+    carries `sources/empty-since.json`, the record of how long each board has
+    been empty, because the runner starts from a fresh checkout and a log it
+    cannot keep means no board ever reaches the thresholds and nothing is ever
+    pruned. The evidence belongs in the diff with the deletion it justifies.
+
+    What matters is the boundary, not the literal: every path is a known file
+    under sources/, and nothing here reaches out/, data/ or a config.
+    """
     pr = _step_named(_load("validate.yml"), "validate", "Open a pull request")
-    assert pr["with"]["add-paths"] == "sources/sources.json", \
-        "anything wider could commit out/, a database, or a personal config"
+    raw = pr["with"]["add-paths"]
+    paths = [x.strip() for x in str(raw).splitlines() if x.strip()]
+    assert paths, "the prune pull request commits nothing"
+    assert set(paths) <= {"sources/sources.json", "sources/empty-since.json"}, \
+        f"unexpected path in the prune pull request: {paths}"
+    for p in paths:
+        assert p.startswith("sources/"), p
+        assert "*" not in p and ".." not in p, p
 
 
 # ------------------------------------------------------------------ secrets
