@@ -18,6 +18,7 @@ domain you asked for and reports a mismatch rather than banking it.
 
 from __future__ import annotations
 
+import inspect
 import re
 from dataclasses import dataclass, replace
 from functools import lru_cache
@@ -583,15 +584,44 @@ def count_jobs(src: Source, timeout: int = 25,
     is appended to it when the request never got as far as HTTP. Callers that
     delete things need that as a flag rather than as prose in the third value.
     """
-    from .fetch import fetch_one, fetch_taleo
-    if src.platform == "taleo":
-        # Taleo's board URL is a JavaScript shell: a plain GET of it returns a
-        # page with no job rows in it at all, on every live board checked. So
-        # `fetch_one` would report every Taleo source as zero jobs, `validate`
-        # would call that dead, and `validate --prune` deletes dead sources.
-        # One page is enough to answer "is this board alive".
-        res = fetch_taleo(src, [], timeout=timeout, retries=1, user_agent=UA,
-                          max_pages=1)
+    from . import fetch as fetch_mod
+    from .fetch import fetch_one
+    # A platform with its own fetcher has one because a plain GET of its board
+    # URL does not return the postings. `fetch_one` on such a source reports
+    # zero jobs, `validate` calls that dead, and `validate --prune` deletes a
+    # live employer.
+    #
+    # Taleo was special-cased here for exactly that reason, and only Taleo,
+    # which made this a list of one that nobody extended. On 7 September 2026
+    # a validate run marked BOTH Google Careers boards dead and prunable while
+    # they were serving 120 UK and 1,855 US roles: `fetch_google_careers`
+    # reads the postings out of an `AF_initDataCallback` block in the page,
+    # and a plain GET returns that page with nothing a parser can see. The
+    # adapter had been added four days earlier and the weekly job was already
+    # queued to delete it.
+    #
+    # So the rule is the fetcher, not the name. One page is enough to answer
+    # "is this board alive", and the signatures differ, so the call is built
+    # per platform rather than guessed at.
+    special = getattr(fetch_mod, f"fetch_{src.platform}", None)
+    if special is not None and src.platform not in KEYED_PLATFORMS:
+        kw = {"timeout": timeout, "retries": 1, "user_agent": UA,
+              "max_pages": 1}
+        try:
+            params = inspect.signature(special).parameters
+        except (TypeError, ValueError):
+            params = {}
+        try:
+            if "terms" in params:
+                res = special(src, [], **{k: v for k, v in kw.items()
+                                          if k in params})
+            else:
+                res = special(src, **{k: v for k, v in kw.items()
+                                      if k in params})
+        except Exception as exc:
+            # A bespoke fetcher that throws is a thing this could not read,
+            # never a board with nothing. `--prune` deletes on "dead".
+            return 0, [], f"could not be read: {type(exc).__name__}: {exc}"[:200]
     else:
         res = fetch_one(src, timeout=timeout, retries=1, user_agent=UA)
     if not res.ok:
@@ -1009,10 +1039,33 @@ def validate_source(src: Source) -> dict:
             "live_jobs": n,
             "verdict": "unreachable" if err else ("dead" if n == 0 else "live"),
             "transport": alerts[0] if alerts else None,
-            "prunable": not err and n == 0 and not alerts,
+            # An ALREADY EXPANDED search is never prunable, however empty.
+            #
+            # `_load_sources` expands one template into a search per title and
+            # per country, so `validate` sees rows like "Workable search: vice
+            # president engineering in United Arab Emirates". That returning
+            # nothing today is not a dead source, it is a query with no
+            # current results, and tomorrow it may have some. There is also
+            # nothing to delete: the expansion is not a row in sources.json,
+            # only the template is.
+            #
+            # It still did damage. On 7 September 2026 six such searches were
+            # counted among the dead, and the dead count is what the weekly
+            # prune measures against its cap of 250. Transient empty searches
+            # inflating that number is how a legitimate prune gets refused,
+            # which leaves the list unvalidated, which makes next week's
+            # number larger still.
+            #
+            # An UNEXPANDED template is a different question and stays
+            # prunable: it is probed with a real word, and if the board
+            # answers nothing to that it may really be gone.
+            "prunable": (not err and n == 0 and not alerts
+                         and "{keyword}" in src.url),
             "note": f"could not be read: {err}" if err else
                     ("keyword search, probed with "
-                     f"'{PROBE_KEYWORD}'; identity not checked"),
+                     f"'{PROBE_KEYWORD}'; identity not checked"
+                     + ("" if "{keyword}" in src.url else
+                        "; an expanded search, so never pruned")),
         }
 
     alerts: list = []
