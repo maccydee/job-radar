@@ -150,6 +150,75 @@ def _header_field(v, limit: int = 300) -> str:
     return " ".join(_DELIM_LINE.sub(" ", str(v or "")).split())[:limit]
 
 
+def screening_filters(cfg_file, config_path=None) -> str:
+    """The filters a screening needs, complete, in the order they matter.
+
+    This used to paste the raw config YAML and cut it at 6,000 characters.
+    The real file is 9,941 after redaction, so 3,941 characters went missing
+    from the end of every screening prompt this tool has ever built, and what
+    lives at the end of a config is the dealbreakers.
+
+    Measured on 12 September 2026 against the live config: of five
+    dealbreakers, `solutions-architect wording` and `manages managers` were
+    never sent. The second is the one that matters most to this user, and it
+    had never reached a single screen.
+
+    Nothing announced it. The screening still produced its verdict, its fails
+    table and its gaps, and read exactly like one that had checked
+    everything. Two screens noticed only because the YAML happened to end
+    mid-sentence and the model said so unprompted; had the cut landed on a
+    line boundary, nothing anywhere would have.
+
+    So this sends the parsed config rather than a slice of its bytes. It is
+    smaller than the old truncated string, because comments and seventeen
+    thousand source entries are not filters, and it cannot lose the end of
+    the list.
+    """
+    from .config import load as _load
+    try:
+        cfg = _load(config_path) if config_path else _load(str(cfg_file))
+    except Exception as e:
+        # Better to say the filters could not be read than to send a partial
+        # set that reads as the whole one. That is the same failure the
+        # truncation was, arriving by a different route.
+        return (f"(your config could not be read: {type(e).__name__}: "
+                f"{str(e)[:200]}. Screen against the posting alone, say so in "
+                f"the verdict, and do not imply any dealbreaker passed.)")
+
+    out = ["Titles I am looking for:"]
+    out += [f"  - {t}" for t in cfg.titles_include] or ["  (none set)"]
+    if cfg.titles_exclude:
+        out.append("Titles to never show:")
+        out += [f"  - {t}" for t in cfg.titles_exclude]
+    out.append("")
+    out.append("Countries I can work in: "
+               + (", ".join(cfg.countries) or "(none set)"))
+    for label, attr in (("Would relocate to", "relocate_to"),
+                        ("Would need sponsorship in", "need_sponsorship"),
+                        ("Places to always exclude", "exclude_locations")):
+        vals = getattr(cfg, attr, None)
+        if vals:
+            out.append(f"{label}: {', '.join(vals)}")
+    out.append(f"Remote acceptable: {bool(getattr(cfg, 'remote_ok', True))}")
+    out.append("")
+    floor = getattr(cfg, "salary_floor", None)
+    out.append(f"Salary floor: {floor:,.0f} {cfg.salary_currency}" if floor
+               else "Salary floor: none set")
+    out.append("")
+
+    # Last, in full, and counted. The number is stated so the reader can check
+    # it against the table they produce: a screening that silently skipped
+    # one of these is worse than no screening at all.
+    out.append(f"Dealbreakers, all {len(cfg.dealbreakers)} of them. A hard one "
+               f"means do not apply; a soft one is a warning:")
+    for d in cfg.dealbreakers:
+        out.append(f"  - {d.name} ({'hard' if d.hard else 'soft'}): "
+                   f"pattern /{d.pattern}/")
+    if not cfg.dealbreakers:
+        out.append("  (none configured, so no dealbreaker can be said to pass)")
+    return "\n".join(out)
+
+
 def _write_jd(d: Path, row) -> Path:
     """Save the description at generation time.
 
@@ -639,8 +708,7 @@ def run_job(job_id: int, db_path=None, base=None, cv_source=None,
         cfg_file = (Path(config_path) if config_path else
                     next((Path(n) for n in ("config.local.yaml", "config.yaml")
                           if Path(n).exists()), None))
-        cfg = (redact_secrets(cfg_file.read_text(encoding="utf-8"))[:6000]
-               if cfg_file else "(no config found)")
+        cfg = screening_filters(cfg_file, config_path)
 
         # Same reason: copy the base CV in rather than referencing it. The
         # path comes from the config, which validates it exists on load, so a
