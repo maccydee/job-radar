@@ -1189,6 +1189,16 @@ def _enrich_step(con, cfg) -> None:
     from . import enrich
     rows = enrich.candidates(con)
     if not rows:
+        # Re-screened even with nothing to fetch. The scan's upsert rewrites
+        # `flags` from a fresh parse, and a LinkedIn card parses with an empty
+        # description, so every re-seen role got "listing-only: no description
+        # available" back on top of the full advert it already had stored.
+        # Measured on 14 Sept 2026: 215 of 217 LinkedIn roles carried a
+        # description and were still labelled as having none.
+        dropped = _rescreen(con, cfg)
+        if dropped:
+            _say(f"  {dropped} role(s) failed a rule once their text was "
+                 f"readable and have been hidden")
         return
     _say(f"  fetching {len(rows)} postings that arrived as headlines only...")
     # Left on `enrich.run`'s own default of `fetch.DEFAULT_CONCURRENCY`, and
@@ -1210,6 +1220,16 @@ def _enrich_step(con, cfg) -> None:
                  f"readable and have been hidden")
     else:
         _say(f"  none of the {tried} could be fetched. They stay as listings.")
+        # Same reason as above: roles enriched on an earlier run still need
+        # the flags this scan's upsert just overwrote put right.
+        _rescreen(con, cfg)
+
+
+def _about_missing_text(flag: str) -> bool:
+    """A flag that only means the advert text was absent or thin."""
+    f = flag.lower()
+    return ("not screened" in f or "barely screened" in f
+            or "listing-only" in f or "listing only" in f)
 
 
 def _rescreen(con, cfg) -> int:
@@ -1254,9 +1274,12 @@ def _rescreen(con, cfg) -> int:
             dropped += 1
             continue
         # The old flags were written against an empty description and now
-        # claim things that are no longer true.
+        # claim things that are no longer true. All three wordings, not just
+        # "not screened": the LinkedIn adapter writes "listing-only: no
+        # description available", and a short first read writes "barely
+        # screened", and both survived on roles screened against the full text.
         flags = [f for f in _json.loads(r["flags"] or "[]")
-                 if "not screened" not in f]
+                 if not _about_missing_text(f)]
         flags += [f for f in job.flags if f not in flags]
         con.execute("UPDATE roles SET flags=? WHERE uid=?",
                     (_json.dumps(flags), r["uid"]))

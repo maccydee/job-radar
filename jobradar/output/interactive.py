@@ -1551,7 +1551,10 @@ def _row(r, arts, job, run=0, eager=True) -> str:
     # looked like it had passed a set of sterling figures below it. Same for
     # a posting that rules out sponsorship.
     notes = [f for f in _flags(r)
+             # Both spellings: the LinkedIn adapter writes "listing-only",
+             # and matching only the spaced form showed that note nowhere.
              if ("not screened" in f or "listing only" in f
+                 or "listing-only" in f
                  or "not compared" in f or "sponsor" in f)]
     busy = job["kind"] if job else ""
     has_cv = "cv" in arts
