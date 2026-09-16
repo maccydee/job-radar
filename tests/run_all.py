@@ -70,6 +70,35 @@ def _as_callable(cls, mname):
     return lambda: cls(mname).debug()
 
 
+def run_one(fn):
+    """Run one test. Returns ("pass"|"skip"|"fail", reason).
+
+    `skip` exists because `debug()` does not handle skips the way a normal
+    unittest runner does: `self.skipTest(...)` raises `unittest.SkipTest`,
+    which arrived here as an ordinary exception and was reported as a
+    failure. Three tests that skip when there is no config in the checkout
+    turned every CI run red from 12 September 2026, while the same suite
+    passed on a machine that had one. A skip is not a pass either, so it is
+    counted and named separately rather than folded into the total.
+    """
+    try:
+        fn()
+        return "pass", ""
+    except KeyboardInterrupt:
+        raise
+    except unittest.SkipTest as e:
+        return "skip", str(e)
+    except BaseException:
+        # BaseException, not Exception. SystemExit is not an Exception, so a
+        # test that exits walked straight past this and took the whole runner
+        # with it: the log stopped mid-suite, with no FAIL line, no traceback
+        # and no summary, and the job reported exit code 1 with nothing to say
+        # why. It cost three red CI runs to find, and the test that did it was
+        # one calling `rank.rank`, which checks for the `claude` binary up
+        # front and raises SystemExit when it is missing.
+        return "fail", ""
+
+
 def main() -> int:
     files = sorted(p for p in HERE.glob("test_*.py"))
     if not files:
@@ -77,6 +106,7 @@ def main() -> int:
         return 1
 
     total = bad = 0
+    skipped = []
     unimportable = []
     for path in files:
         print(f"\n{path.name}")
@@ -105,22 +135,13 @@ def main() -> int:
             continue
         for name, fn in fns:
             total += 1
-            try:
-                fn()
+            verdict, why = run_one(fn)
+            if verdict == "pass":
                 print(f"  pass  {name}")
-            except KeyboardInterrupt:
-                raise
-            except BaseException:
-                # BaseException, not Exception. SystemExit is not an
-                # Exception, so a test that exits walked straight past this
-                # and took the whole runner with it: the log stopped
-                # mid-suite, with no FAIL line, no traceback and no summary,
-                # and the job reported exit code 1 with nothing to say why.
-                # It cost three red CI runs to find, and the test that did it
-                # was one calling `rank.rank`, which now checks for the
-                # `claude` binary up front and raises SystemExit when it is
-                # missing, which it is on every runner and is not on my
-                # machine.
+            elif verdict == "skip":
+                skipped.append((name, why))
+                print(f"  skip  {name}: {why}")
+            else:
                 bad += 1
                 print(f"  FAIL  {name}")
                 traceback.print_exc()
@@ -135,7 +156,15 @@ def main() -> int:
               f"That is usually one broken module, not many broken tests:")
         for name in unimportable:
             print(f"  {name}")
-    print(f"\n{total - bad}/{total} passed across {len(files)} files")
+    # Skips are named, not buried. A test that could not run is not a test
+    # that passed, and a suite quietly skipping half of itself is the failure
+    # this file exists to prevent.
+    if skipped:
+        print(f"\n{len(skipped)} skipped:")
+        for name, why in skipped:
+            print(f"  {name}: {why}")
+    print(f"\n{total - bad - len(skipped)}/{total} passed across "
+          f"{len(files)} files, {len(skipped)} skipped, {bad} failed")
     return 1 if bad else 0
 
 
