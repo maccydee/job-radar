@@ -126,6 +126,19 @@ def fetch(url: str, session=None, timeout: int = 20) -> "Details":
 # same fix, so they share the machinery rather than each growing their own.
 _WD_URL = re.compile(r"https://([^/]+)/([a-z]{2}-[A-Z]{2}/)?([^/]+)/job/(.+)$")
 
+# The white-label domain reverses the usual order. myworkdayjobs.com puts the
+# tenant in the subdomain (thales.wd3.myworkdayjobs.com); myworkdaysite.com
+# puts the POD there instead (wd3.myworkdaysite.com) and carries the tenant
+# one path segment in, after a literal "recruiting". Measured live, 17 Sept
+# 2026: wd3.myworkdaysite.com/recruiting/takeaway/JET-ECS-R/job/... is a
+# Phenom apply link for a Just Eat Takeaway requisition, and `_WD_URL` matched
+# none of it -- host, path and job all came back empty -- so `_workday_api`
+# returned "" before a request was ever made. TJX's board carries the same
+# shape (wd1.myworkdaysite.com/recruiting/tjx/TJX_EXTERNAL/...), so this is
+# the platform's white-label convention, not a one-off.
+_WD_SITE_URL = re.compile(
+    r"https://([^/]+)/recruiting/([^/]+)/([^/]+)/job/(.+)$")
+
 
 def _workday_api(url: str) -> str:
     """Turn a human Workday URL into its CXS one.
@@ -142,32 +155,64 @@ def _workday_api(url: str) -> str:
     tenant carries the `/apply` form, and measured on live tenants (Thales,
     GE HealthCare) the same requisition answers 406 with the suffix and 200
     with 8,035 and 8,873 characters of advert without it.
+
+    The myworkdaysite.com white-label shape is handled here too, by rebuilding
+    the tenant's own myworkdayjobs.com host: myworkdaysite.com is a proxy in
+    front of the same CXS API, not a second one, and asking IT for `/wday/cxs`
+    was never going to be tested until a Phenom board actually used it.
     """
-    m = _WD_URL.match((url or "").split("?")[0])
-    if not m:
-        return ""
-    host, _lang, site, path = m.groups()
+    clean = (url or "").split("?")[0]
+    m = _WD_SITE_URL.match(clean)
+    if m:
+        host, tenant, site, path = m.groups()
+        pod = host.split(".")[0]
+        api_host = f"{tenant}.{pod}.myworkdayjobs.com"
+    else:
+        m = _WD_URL.match(clean)
+        if not m:
+            return ""
+        host, _lang, site, path = m.groups()
+        api_host = host
+        tenant = host.split(".")[0]
     path = re.sub(r"/apply/?$", "", path).rstrip("/")
     if not path:
         return ""
-    tenant = host.split(".")[0]
-    return f"https://{host}/wday/cxs/{tenant}/{site}/job/{path}"
+    return f"https://{api_host}/wday/cxs/{tenant}/{site}/job/{path}"
 
 
-def _from_workday(url: str, session=None, timeout: int = 20) -> str:
+def _from_workday(url: str, session=None, timeout: int = 20) -> "Details":
+    """Workday's CXS job-detail endpoint, or a `Details` recording why not.
+
+    Blocked with a 403 "permission denied" on every tenant tried live on 17
+    Sept 2026 -- including IQVIA and RBC, whose Workday CXS reads had worked
+    on earlier scans -- which is Workday tightening this endpoint rather than
+    a URL this module gets wrong. Recorded as a failed fetch, same as any
+    other 403: no header or method swap chases it further, because that is
+    the line the repo draws between reading a public endpoint and working
+    around a block.
+    """
     api = _workday_api(url)
     if not api:
-        return ""
+        return Details.make(
+            error="URL doesn't match a Workday CXS job page")
     get = (session or requests).get
     try:
         r = get(api, headers={"User-Agent": UA, "Accept": "application/json"},
                 timeout=timeout)
-        if r.status_code != 200:
-            return ""
+    except requests.RequestException as e:
+        return Details.make(error=f"request failed: {type(e).__name__}")
+    if r.status_code != 200:
+        return Details.make(error=f"HTTP {r.status_code}")
+    try:
         info = (r.json() or {}).get("jobPostingInfo") or {}
-    except (requests.RequestException, ValueError):
-        return ""
-    return _strip(info.get("jobDescription") or "")
+    except ValueError:
+        return Details.make(error="response was not JSON")
+    text = _strip(info.get("jobDescription") or "")
+    if not text:
+        return Details.make(
+            error="HTTP 200 but no jobDescription in the response "
+                  "(removed posting, or the field changed)")
+    return Details.make(text)
 
 
 # `/posting/` and `/postings/` are the OLD public path and it 404s. It is also
@@ -187,26 +232,34 @@ _SR_URL = re.compile(
     r"smartrecruiters\.com/([^/?#]+)/(?:postings?/)?(\d+)")
 
 
-def _from_smartrecruiters(url: str, session=None, timeout: int = 20) -> str:
+def _from_smartrecruiters(url: str, session=None, timeout: int = 20) -> "Details":
     m = _SR_URL.search(url or "")
     if not m:
-        return ""
+        return Details.make(
+            error="URL doesn't match a SmartRecruiters posting")
     company, posting = m.groups()
     get = (session or requests).get
     try:
         r = get(f"https://api.smartrecruiters.com/v1/companies/{company}"
                 f"/postings/{posting}", timeout=timeout)
-        if r.status_code != 200:
-            return ""
+    except requests.RequestException as e:
+        return Details.make(error=f"request failed: {type(e).__name__}")
+    if r.status_code != 200:
+        return Details.make(error=f"HTTP {r.status_code}")
+    try:
         secs = ((r.json() or {}).get("jobAd") or {}).get("sections") or {}
-    except (requests.RequestException, ValueError):
-        return ""
+    except ValueError:
+        return Details.make(error="response was not JSON")
     # Keep the qualifications section: it is where the must-haves live, which
     # is what dealbreakers and fit are actually judged on.
     order = ("jobDescription", "qualifications", "additionalInformation",
              "companyDescription")
-    return _strip("\n\n".join((secs.get(k) or {}).get("text") or ""
+    text = _strip("\n\n".join((secs.get(k) or {}).get("text") or ""
                                for k in order if secs.get(k)))
+    if not text:
+        return Details.make(
+            error="HTTP 200 but no jobAd sections in the response")
+    return Details.make(text)
 
 
 def _strip(markup: str) -> str:
@@ -216,10 +269,12 @@ def _strip(markup: str) -> str:
     return "\n".join(x for x in lines if x).strip()
 
 
-# Breezy publishes schema.org JSON-LD on every posting page so that Google
-# Jobs can index it. That block carries the whole advert, which the `/json`
+# Breezy publishes schema.org JSON-LD on MOST posting pages so that Google
+# Jobs can index them. That block carries the whole advert, which the `/json`
 # board endpoint does not carry at all, so this is reading a documented
-# structure rather than scraping their markup.
+# structure rather than scraping their markup where it is there to read.
+# Where it is not, `_from_breezy` falls back to Breezy's own template markup;
+# see that function for the tenants that forced it.
 _LD_BLOCK = re.compile(
     r'<script[^>]+type="application/ld\+json"[^>]*>(.*?)</script>', re.S | re.I)
 
@@ -235,12 +290,46 @@ def _json_ld_text(page: str) -> str:
             node = json.loads(m.group(1))
         except ValueError:
             continue
+        items = node if isinstance(node, list) else [node]
+        # A block can bundle several schema.org nodes under "@graph" instead
+        # of listing them at the top level or as a single object. iCIMS
+        # started doing this (checked live, 17 Sept 2026: a Vista Global
+        # posting's two blocks were {Organization, WebSite, WebPage,
+        # BreadcrumbList} in one @graph and {WebPage, Organization,
+        # LocalBusiness, BreadcrumbList} in the other, never a JobPosting at
+        # the top level of either), so a JobPosting nested the same way would
+        # stop being found at all without this.
+        nodes = []
+        for d in items:
+            if isinstance(d, dict):
+                nodes.append(d)
+                graph = d.get("@graph")
+                if isinstance(graph, list):
+                    nodes.extend(g for g in graph if isinstance(g, dict))
         # There are two blocks on a Breezy page and the first one is a WebSite,
         # so taking the first match returned an empty description every time.
-        for d in (node if isinstance(node, list) else [node]):
-            if isinstance(d, dict) and d.get("@type") == "JobPosting":
+        for d in nodes:
+            if d.get("@type") == "JobPosting":
                 return _strip(d.get("description") or "")
     return ""
+
+
+def _page_with_error(url: str, session=None, timeout: int = 20) -> "tuple[str, str]":
+    """A posting page's HTML, and why there is none when the fetch failed.
+
+    Split from `_page` so a fetcher wrapping the result in a `Details` can
+    say which of "couldn't reach it" and "reached it and got nothing" this
+    was, the distinction `fetch()` already makes for LinkedIn.
+    """
+    get = (session or requests).get
+    try:
+        r = get((url or "").split("?")[0], headers={"User-Agent": UA},
+                timeout=timeout)
+    except requests.RequestException as e:
+        return "", f"request failed: {type(e).__name__}"
+    if r.status_code != 200:
+        return "", f"HTTP {r.status_code}"
+    return r.text, ""
 
 
 def _page(url: str, session=None, timeout: int = 20) -> str:
@@ -249,26 +338,68 @@ def _page(url: str, session=None, timeout: int = 20) -> str:
     The board links carry `?source=...` on some postings; the page is the same
     without it and the shorter URL is what the seen-set is keyed on.
     """
-    get = (session or requests).get
-    try:
-        r = get((url or "").split("?")[0], headers={"User-Agent": UA},
-                timeout=timeout)
-    except requests.RequestException:
-        return ""
-    return r.text if r.status_code == 200 else ""
+    text, _err = _page_with_error(url, session, timeout)
+    return text
 
 
 def _from_json_ld(url: str, session=None, timeout: int = 20) -> str:
     """The advert out of a posting page's schema.org JobPosting block.
 
-    Breezy, Jobvite and Avature all publish one so that Google Jobs can index
-    them, and none of them puts the advert in its list endpoint. Same problem,
-    same fix, so they share this rather than each growing their own copy.
+    Jobvite and Avature both publish one so that Google Jobs can index them,
+    and neither puts the advert in its list endpoint. Same problem, same fix,
+    so they share this rather than each growing their own copy. Breezy used
+    to as well; see `_from_breezy` for why it no longer only relies on this.
     """
     return _json_ld_text(_page(url, session, timeout))
 
 
-_from_breezy = _from_json_ld
+# Breezy's Angular portal keeps the closing notice server-rendered even after
+# the advert div is gone, so "closed" and "changed shape" have to be told
+# apart before either is reported as the other. Checked live, 17 Sept 2026: a
+# closed Queen's Engineering Society posting answered 200 with this exact
+# copy and no `<div class="description">` anywhere on the page.
+_BZ_CLOSED = re.compile(
+    r"no longer accepting (?:candidates|applications)", re.I)
+
+# The advert's own server-rendered container: present, once, on every
+# breezy.hr tenant checked on 17 Sept 2026, including ones that ALSO carry
+# the JSON-LD block (robust-open-online-safety-tools and insentra both have
+# exactly one `<div class="description">`, and insentra's JSON-LD works
+# fine), so this is Breezy's own template rather than an employer theme and
+# is safe to read as a fallback rather than a second source of truth.
+_BZ_DESC_OPEN = re.compile(r'<div class="description">')
+
+
+def _from_breezy(url: str, session=None, timeout: int = 20) -> "Details":
+    """Breezy's posting page, JSON-LD first and Breezy's own markup second.
+
+    Used to be `_from_json_ld` outright: Breezy publishes a JobPosting block
+    on most tenants so Google Jobs can index them. Two live boards checked 17
+    Sept 2026 (the-engineering-society-of-queen-s-university,
+    robust-open-online-safety-tools) carry ZERO ld+json blocks of any type on
+    a healthy 200 -- not even the WebSite one every other tenant has -- so the
+    shared reader returned "" on both and both roles stayed stuck with 15 and
+    70 characters of stored description. What both pages still carry,
+    server-rendered and untouched by the Angular shell around it, is
+    `<div class="description">`.
+    """
+    page, err = _page_with_error(url, session, timeout)
+    if not page:
+        return Details.make(error=err)
+    text = _json_ld_text(page)
+    if text:
+        return Details.make(text)
+    for body in _inner_blocks(page, _BZ_DESC_OPEN, "div"):
+        text = _strip_blocks(body)
+        if text:
+            return Details.make(text)
+    if _BZ_CLOSED.search(page):
+        return Details.make(
+            error="posting closed (Breezy: no longer accepting candidates)")
+    return Details.make(
+        error="HTTP 200 but no JobPosting JSON-LD and no description div "
+              "on the page")
+
 
 # Jobvite publishes a JobPosting block on most tenants and none at all on
 # some: `ness`, `traffictech` and `edgeautonomy-careers` all carry one, while
@@ -292,16 +423,20 @@ _JV_DESC_OPEN = re.compile(
     r'<div[^>]*\bclass="[^"]*\bjv-job-detail-description\b[^"]*"[^>]*>', re.I)
 
 
-def _from_jobvite(url: str, session=None, timeout: int = 20) -> str:
-    page = _page(url, session, timeout)
+def _from_jobvite(url: str, session=None, timeout: int = 20) -> "Details":
+    page, err = _page_with_error(url, session, timeout)
     if not page:
-        return ""
+        return Details.make(error=err)
     text = _json_ld_text(page)
     if text:
-        return text
+        return Details.make(text)
     for body in _inner_blocks(page, _JV_DESC_OPEN, "div"):
-        return _strip_blocks(body)
-    return ""
+        text = _strip_blocks(body)
+        if text:
+            return Details.make(text)
+    return Details.make(
+        error="HTTP 200 but no JobPosting JSON-LD and no "
+              "jv-job-detail-description div on the page")
 
 
 # JazzHR publishes an Organization block on the posting page but no
@@ -312,17 +447,21 @@ _JZ_DESC = re.compile(
     re.S | re.I)
 
 
-def _from_jazzhr(url: str, session=None, timeout: int = 20) -> str:
+def _from_jazzhr(url: str, session=None, timeout: int = 20) -> "Details":
     get = (session or requests).get
     try:
         r = get((url or "").split("?")[0], headers={"User-Agent": UA},
                 timeout=timeout)
-    except requests.RequestException:
-        return ""
+    except requests.RequestException as e:
+        return Details.make(error=f"request failed: {type(e).__name__}")
     if r.status_code != 200:
-        return ""
+        return Details.make(error=f"HTTP {r.status_code}")
     m = _JZ_DESC.search(r.text)
-    return _strip(m.group(1)) if m else ""
+    text = _strip(m.group(1)) if m else ""
+    if not text:
+        return Details.make(
+            error="HTTP 200 but no #job-description div on the page")
+    return Details.make(text)
 
 
 # Taleo's posting page renders itself from JavaScript too, so there is no
@@ -338,18 +477,41 @@ _TL_DESC_LIST = re.compile(
     r"'descRequisition'\s*,\s*\[(.*?)\]\s*\)\s*;", re.S)
 _TL_DESC_ITEM = re.compile(r"'((?:[^'\\]|\\.)*)'", re.S)
 
+# `jobapply.ftl` is the START of the application flow for the same
+# requisition `jobdetail.ftl` describes, and it renders no description panel
+# at all: measured live, 17 Sept 2026, Edmonton Transit's R-56005 answered 200
+# with 41,938 bytes and zero characters of `requisitionDescriptionInterface`
+# at `jobapply.ftl`, and 3,300 characters at `jobdetail.ftl` for the identical
+# `job=` id. Phenom's own `applyUrl` points at whichever page the employer's
+# Taleo section happens to link, so the swap happens here rather than trusting
+# the source to have picked the one this reader needs.
+_TL_APPLY = re.compile(r"/jobapply\.ftl", re.I)
 
-def _from_taleo(url: str, session=None, timeout: int = 20) -> str:
+
+def _from_taleo(url: str, session=None, timeout: int = 20) -> "Details":
+    url = _TL_APPLY.sub("/jobdetail.ftl", url or "")
     get = (session or requests).get
     try:
         r = get(url or "", headers={"User-Agent": UA}, timeout=timeout)
-    except requests.RequestException:
-        return ""
+    except requests.RequestException as e:
+        return Details.make(error=f"request failed: {type(e).__name__}")
     if r.status_code != 200:
-        return ""
+        return Details.make(error=f"HTTP {r.status_code}")
+    # Taleo answers a pulled requisition with a 200 and this interface
+    # instead of the description one, rather than a 404. Measured live, 17
+    # Sept 2026: all six of Mace's `stgmacecareers` postings queued that
+    # afternoon answered it, which is a removed requisition (the same
+    # tenant's live search no longer lists any of the six ids either), not a
+    # parser miss.
+    if "requisitionUnavailableInterface" in r.text:
+        return Details.make(
+            error="posting removed (Taleo says the requisition is no "
+                  "longer available)")
     m = _TL_DESC_LIST.search(r.text)
     if not m:
-        return ""
+        return Details.make(
+            error="HTTP 200 but no requisitionDescriptionInterface array "
+                  "on the page")
     best = ""
     for item in _TL_DESC_ITEM.findall(m.group(1)):
         # `!*!` is Taleo's own marker for "this element is rich text", not part
@@ -357,32 +519,43 @@ def _from_taleo(url: str, session=None, timeout: int = 20) -> str:
         text = _strip(unquote(item.replace("!*!", "")))
         if len(text) > len(best):
             best = text
-    return best
+    if not best:
+        return Details.make(
+            error="requisitionDescriptionInterface array had nothing in it")
+    return Details.make(best)
 
 
 # BambooHR's `/careers/list` is a summary index: no advert text, no salary, no
 # date. The advert lives one request away at `/careers/<id>/detail`, which is
 # the same JSON API the board itself is built on rather than a page scrape.
-def _from_bamboohr(url: str, session=None, timeout: int = 20) -> str:
+def _from_bamboohr(url: str, session=None, timeout: int = 20) -> "Details":
     base = (url or "").split("?")[0].rstrip("/")
     if not re.search(r"bamboohr\.com/careers/\d+$", base):
-        return ""
+        return Details.make(
+            error="URL doesn't match a BambooHR careers page")
     get = (session or requests).get
     try:
         r = get(f"{base}/detail", headers={"User-Agent": UA,
                                            "Accept": "application/json"},
                 timeout=timeout)
-        if r.status_code != 200:
-            return ""
+    except requests.RequestException as e:
+        return Details.make(error=f"request failed: {type(e).__name__}")
+    if r.status_code != 200:
+        return Details.make(error=f"HTTP {r.status_code}")
+    try:
         job = ((r.json() or {}).get("result") or {}).get("jobOpening") or {}
-    except (requests.RequestException, ValueError):
-        return ""
+    except ValueError:
+        return Details.make(error="response was not JSON")
     text = _strip(job.get("description") or "")
     # The detail record has a `compensation` string the list endpoint does not.
     # Putting it in front of the advert is what lets `run()` re-parse pay for
     # these roles, which otherwise carry no figure from anywhere.
     pay = (job.get("compensation") or "").strip()
-    return f"Compensation: {pay}\n\n{text}".strip() if pay else text
+    out = f"Compensation: {pay}\n\n{text}".strip() if pay else text
+    if not out:
+        return Details.make(
+            error="HTTP 200 but no jobOpening.description in the response")
+    return Details.make(out)
 
 
 # Oracle and SuccessFactors both write their adverts as a chain of <div>s with
@@ -438,11 +611,23 @@ def _inner_blocks(page: str, opener, tag: str):
 _ICIMS_JOB = re.compile(r"/jobs/\d+/", re.I)
 _ICIMS_WALL = re.compile(r"/(?:login|register)/?$", re.I)
 
+# iCIMS' own template class for the description body, present across tenants
+# because it is iCIMS' markup rather than the employer's theme. Needed as a
+# fallback now: iCIMS stopped putting a JobPosting node in the page's own
+# schema.org blocks. Checked live, 17 Sept 2026: a Vista Global posting's two
+# ld+json blocks were Organization/WebSite/WebPage/BreadcrumbList in one
+# @graph and WebPage/Organization/LocalBusiness/BreadcrumbList in the other,
+# neither carrying a JobPosting node, so the shared reader this fetcher used
+# to rely on entirely now finds nothing on any tenant, not only the ones it
+# never worked on.
+_ICIMS_TEXT_OPEN = re.compile(
+    r'<div[^>]*\bclass="[^"]*\biCIMS_Expandable_Text\b[^"]*"[^>]*>', re.I)
 
-def _from_icims(url: str, session=None, timeout: int = 20) -> str:
+
+def _from_icims(url: str, session=None, timeout: int = 20) -> "Details":
     base = (url or "").split("?")[0]
     if not _ICIMS_JOB.search(base):
-        return ""
+        return Details.make(error="URL doesn't match an iCIMS job page")
     # `.../job/login` is the sign-in wall in front of the same requisition,
     # and it answers 200 with a 28KB page carrying no JobPosting block at all,
     # so it reads as a healthy page with no advert on it. Dropping the suffix
@@ -454,11 +639,21 @@ def _from_icims(url: str, session=None, timeout: int = 20) -> str:
     try:
         r = get(f"{base}?in_iframe=1", headers={"User-Agent": UA},
                 timeout=timeout)
-    except requests.RequestException:
-        return ""
+    except requests.RequestException as e:
+        return Details.make(error=f"request failed: {type(e).__name__}")
     if r.status_code != 200:
-        return ""
-    return _json_ld_text(r.text)
+        return Details.make(error=f"HTTP {r.status_code}")
+    text = _json_ld_text(r.text)
+    if text:
+        return Details.make(text)
+    parts = [_strip_blocks(b)
+             for b in _inner_blocks(r.text, _ICIMS_TEXT_OPEN, "div")]
+    out = "\n\n".join(p for p in parts if p).strip()
+    if out:
+        return Details.make(out)
+    return Details.make(
+        error="HTTP 200 but no JobPosting JSON-LD and no "
+              "iCIMS_Expandable_Text div on the page")
 
 
 # Oracle Recruiting Cloud's posting page is a JavaScript shell: 4.4KB, no
@@ -480,23 +675,32 @@ _ORACLE_API = ("https://{host}/hcmRestApi/resources/latest/"
                "&finder=ById;Id=%22{rid}%22,siteNumber={site}")
 
 
-def _from_oracle(url: str, session=None, timeout: int = 20) -> str:
+def _from_oracle(url: str, session=None, timeout: int = 20) -> "Details":
     m = _ORACLE_JOB.match(url or "")
     if not m:
-        return ""
+        return Details.make(
+            error="URL doesn't match an Oracle Recruiting Cloud job page")
     host, site, rid = m.groups()
     get = (session or requests).get
     try:
         r = get(_ORACLE_API.format(host=host, rid=rid, site=site),
                 headers={"User-Agent": UA, "Accept": "application/json"},
                 timeout=timeout)
-        if r.status_code != 200:
-            return ""
+    except requests.RequestException as e:
+        return Details.make(error=f"request failed: {type(e).__name__}")
+    if r.status_code != 200:
+        return Details.make(error=f"HTTP {r.status_code}")
+    try:
         items = (r.json() or {}).get("items") or []
-    except (requests.RequestException, ValueError):
-        return ""
+    except ValueError:
+        return Details.make(error="response was not JSON")
     if not items or not isinstance(items[0], dict):
-        return ""
+        # A 200 with an empty `items` is Oracle's answer for a requisition
+        # that is no longer on the board, not a malformed request: checked
+        # live, 17 Sept 2026, requisition 110173 on
+        # efhi.fa.em3.oraclecloud.com answered this and was absent from the
+        # same site's own current 200-row listing, sorted by posting date.
+        return Details.make(error="requisition not found (closed or removed)")
     job = items[0]
     # The advert is split across fields and which ones are filled varies by
     # tenant: Marks and Spencer put all 8,762 characters in
@@ -523,7 +727,11 @@ def _from_oracle(url: str, session=None, timeout: int = 20) -> str:
             continue
         parts = [p for p in parts if p not in text]
         parts.append(text)
-    return "\n\n".join(parts)
+    text = "\n\n".join(parts)
+    if not text:
+        return Details.make(
+            error="HTTP 200 but every description field was empty")
+    return Details.make(text)
 
 
 # Avature serves a JobPosting block on some tenants and none at all on others:
@@ -563,24 +771,38 @@ _AV_FIELD = re.compile(
 _AV_MICRO = re.compile(r'<div[^>]*\bitemprop="description"[^>]*>', re.I)
 
 
-def _from_avature(url: str, session=None, timeout: int = 20) -> str:
-    page = _page(url, session, timeout)
+def _from_avature(url: str, session=None, timeout: int = 20) -> "Details":
+    page, err = _page_with_error(url, session, timeout)
     if not page:
-        return ""
+        return Details.make(error=err)
     text = _json_ld_text(page)
     if text:
-        return text
+        return Details.make(text)
     parts = [_strip_blocks(b) for b in _inner_blocks(page, _AV_FIELD, "div")]
     out = "\n\n".join(p for p in parts if p).strip()
     if len(out) >= 200:
-        return out
+        return Details.make(out)
     # The field blocks are the location, the worker type and the req id when
     # there is no advert block among them, which is about 86 characters and
     # is not a description. Below the floor `run()` would discard it anyway,
     # so trying the microdata costs nothing and recovers the whole advert.
     micro = [_strip_blocks(b) for b in _inner_blocks(page, _AV_MICRO, "div")]
     joined = "\n\n".join(p for p in micro if p).strip()
-    return joined if len(joined) > len(out) else out
+    best = joined if len(joined) > len(out) else out
+    if best:
+        return Details.make(best)
+    # Checked live, 17 Sept 2026: baufest.avature.net's JobDetail page has
+    # moved to a client-rendered `portalpacks` bundle -- no JSON-LD, no
+    # field-value divs, no description microdata, just a truncated
+    # og:description teaser in the page shell -- so none of the three readers
+    # above finds anything on a healthy 200. Recorded rather than guessed at
+    # from the teaser: a 299-character marketing excerpt stored as "the
+    # description" is the Phenom-teaser mistake `STUB_FLOORS` exists to catch,
+    # not a fix.
+    return Details.make(
+        error="HTTP 200 but no JobPosting JSON-LD, field-value div or "
+              "description microdata on the page (a client-rendered "
+              "template this reader cannot read without executing JS)")
 
 
 # SuccessFactors RMK publishes no JSON-LD at all: zero blocks on Reckitt and
@@ -603,13 +825,15 @@ _RMK_DESC_OPEN = re.compile(
     r'<span[^>]*\bclass="[^"]*\bjobdescription\b[^"]*"[^>]*>', re.I)
 
 
-def _from_rmk(url: str, session=None, timeout: int = 20) -> str:
-    page = _page(url, session, timeout)
+def _from_rmk(url: str, session=None, timeout: int = 20) -> "Details":
+    page, err = _page_with_error(url, session, timeout)
     if not page:
-        return ""
+        return Details.make(error=err)
     for body in _inner_blocks(page, _RMK_DESC_OPEN, "span"):
-        return _strip_blocks(body)
-    return ""
+        text = _strip_blocks(body)
+        if text:
+            return Details.make(text)
+    return Details.make(error="HTTP 200 but no jobdescription span on the page")
 
 
 # Which fetcher handles which platform. A platform absent from here is one
@@ -622,10 +846,10 @@ def _from_rmk(url: str, session=None, timeout: int = 20) -> str:
 _PCSX_URL = re.compile(r"//([^/]*)/careers/job/(\d+)", re.I)
 
 
-def _from_pcsx(url: str, session=None, timeout: int = 20) -> str:
+def _from_pcsx(url: str, session=None, timeout: int = 20) -> "Details":
     m = _PCSX_URL.search(url or "")
     if not m:
-        return ""
+        return Details.make(error="URL doesn't match a Phenom PCSX posting")
     host, position = m.groups()
     domain = ".".join(host.split(".")[-2:])
     get = (session or requests).get
@@ -633,13 +857,20 @@ def _from_pcsx(url: str, session=None, timeout: int = 20) -> str:
         r = get(f"https://{host}/api/pcsx/position_details"
                 f"?position_id={position}&domain={domain}&hl=en",
                 timeout=timeout)
-        if r.status_code != 200:
-            return ""
+    except requests.RequestException as e:
+        return Details.make(error=f"request failed: {type(e).__name__}")
+    if r.status_code != 200:
+        return Details.make(error=f"HTTP {r.status_code}")
+    try:
         body = r.json() or {}
-    except (requests.RequestException, ValueError):
-        return ""
+    except ValueError:
+        return Details.make(error="response was not JSON")
     data = body.get("data") or body
-    return _strip(data.get("jobDescription") or "")
+    text = _strip(data.get("jobDescription") or "")
+    if not text:
+        return Details.make(
+            error="HTTP 200 but no jobDescription in the response")
+    return Details.make(text)
 
 
 class Details(str):

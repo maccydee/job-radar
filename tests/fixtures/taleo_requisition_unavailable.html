@@ -1,0 +1,63 @@
+<!-- Real bytes, trimmed. Source: https://stgmacecareers.taleo.net/careersection/ex/jobdetail.ftl?job=47233, fetched 2026-09-17. All six of Mace's stgmacecareers postings queued that
+     afternoon answered this way: HTTP 200, no requisitionDescriptionInterface
+     array anywhere on the page, and this interface filled in instead. The
+     same six ids were absent from the tenant's own live search the same
+     day. Everything outside this one script block is removed. -->
+<!DOCTYPE html><html><body>
+<script type="text/javascript">
+var _ftl = {
+ _acts:[['reqListAllJobsPage','joblist'],['requisitionDescriptionPage','jobdetail'],['requisitionDescriptionViewPage','jobview'],['requisitionDescriptionPrintablePage','jobprint'],['unavailableRequisitionPrintablePage','jobprintunavailable'],['reqListBasicPage','jobsearch'],['reqListAdvancedPage','moresearch'],['unavaibleRequisitionPage','unavailablerequisition'],['myJobCartPage','mycart'],['reqListPersonalizedPage','myjobs'],['mySavedSearchesPage','mysearches'],['applicationStatusDetailPage','applicationstatusdetail'],['applicationStatusDetailPrintableFormatPage','applicationstatusdetailprint'],['myReferralsPage','myreferrals'],['mySubmissionsPage','mysubmissions'],['withdrawApplicationConfirmationPage','withdrawapplicationconfirm'],['confirmCandidatePage','confirmcandidate'],['correspondenceListPage','emaillist'],['correspondenceDetailPage','emaildetail'],['correspondencePrintableFormatPage','emailprint'],['requestErrorPage','error'],['notAvailablePage','notavailable'],['noJavaScriptPage','nojavascript'],['unsupportedPage','unsupported'],['selectorPage','selector'],['ftlpspage','ftlps']],
+ _ints:['topNavInterface','requisitionUnavailableInterface','bottomBarInterface'],
+ topNavInterface: {
+  _ctls: [],
+  _hles: ['userNameLabel','ID179','ID185','jobCartAction','technicalHelpInfoTop','ID477','ID508','ID547','ID585','ID623','ID660','ID698','ID736'],
+  _pars: [],
+  _prps: [['ID179','ID174','title',""],['ID185','ID174','alt',""],['ID477','jobSearchTabAction','title',""],['ID508','myJobPageTabActionS','title',""],['ID547','basicSearchTabAction','title',""],['ID585','advancedSearchTabAction','title',""],['ID623','allJobsTabAction','title',""],['ID660','mySubmissionsTabAction','title',""],['ID698','myJobCartTabAction','title',""],['ID736','mySavedSearchTabAction','title',""]],
+  _mpts: [],
+  _hpts: [],
+  _lsts: []
+ },
+ requisitionUnavailableInterface: {
+  _ctls: [],
+  _hles: ['backToHomePageAction','ID809','backAction','ID837','ID857','ID869'],
+  _pars: [],
+  _prps: [['ID809','backToHomePageAction','title',""],['ID837','backAction','title',""]],
+  _mpts: [],
+  _hpts: [],
+  _lsts: []
+ },
+ bottomBarInterface: {
+  _ctls: [],
+  _hles: ['technicalHelpInfoBottom'],
+  _pars: [],
+  _prps: [],
+  _mpts: [],
+  _hpts: [],
+  _lsts: []
+ },
+ setup: function() {
+  var api = _ftl_api;
+  api.fillForm('topNavInterface', []);
+  ftltab_initTabBar('topNavInterface','topNavInterface.tabLevel1','');
+  ftltab_initTabBar('topNavInterface','topNavInterface.tabLevel2a','topNavInterface.tabJS');
+  ftltab_initTabBar('topNavInterface','topNavInterface.tabLevel2b','topNavInterface.tabMY');
+  api.fillInterface('topNavInterface', ['Welcome. You are not signed in.','My Job Cart','My Job Cart','My Job Cart','','Go to the section Job Search','Go to the section My Jobpage','Open the page Basic Search','Open the page Advanced Search','Open the page All Jobs','Open the page My Submissions','Open the page My Job Cart','Open the page My Saved Searches']);
+  api.fillForm('requisitionUnavailableInterface', []);
+  api.fillInterface('requisitionUnavailableInterface', ['Return to the home page','Return to the Career section home page','Back to prior page','Return to the previous page','The job is no longer available.','The job description you are trying to view is no longer available.']);
+  api.fillForm('bottomBarInterface', []);
+  api.fillInterface('bottomBarInterface', ['']);
+ api.updateFloats();
+ },
+ init: function() {
+  var api = _ftl_api;
+  secform_initForm(document.getElementById('ftlform'));
+  api.restoreScroll('ftlform');
+  ftlconfirm_init('topNavInterface','topNavInterface.confirmBeaconReset');
+  ftlconfirm_init('topNavInterface','topNavInterface.confirmBeaconTimedOut');
+  ftlUtil_crossFrameScripting('topNavInterface');
+  ftlUtil_installSessionBeacon('topNavInterface','3600000','2400000','300000');
+ }
+}
+_ftl_api.setup();
+</script>
+</body></html>

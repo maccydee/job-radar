@@ -3630,20 +3630,25 @@ def test_breezy_and_jobvite_read_the_same_json_ld_block():
     puts the advert in its list endpoint, so both read that block with the
     same code rather than keeping two copies that drift.
 
-    They stopped being the same function when Jobvite turned out to have
-    tenants that publish no JSON-LD at all (`savers` and `monarchinvestment`
-    serve zero blocks of any type on a healthy 200), which needed a fallback
-    Breezy has no use for. What must not drift is the JSON-LD reading itself,
-    so that is what this checks: one shared reader, still reached first on
-    both platforms, still producing the same answer for the same page."""
+    Jobvite stopped being a bare alias for the shared reader when it turned
+    out to have tenants that publish no JSON-LD at all (`savers` and
+    `monarchinvestment` serve zero blocks of any type on a healthy 200), which
+    needed a fallback Breezy had no use for -- at the time. Breezy followed it
+    17 Sept 2026: two live tenants (the-engineering-society-of-
+    queen-s-university, robust-open-online-safety-tools) turned out to carry
+    ZERO ld+json blocks of any type either, so it grew the same shape of
+    fallback Jobvite already had. What must not drift is the JSON-LD reading
+    itself, so that is what this checks: one shared reader, still reached
+    first by both platforms' own functions, still producing the same answer
+    for the same page."""
     import inspect
 
     from jobradar import enrich as enrich_mod
 
-    assert enrich_mod.FETCHERS["breezy"] is enrich_mod._from_json_ld
-    src = inspect.getsource(enrich_mod._from_jobvite)
-    assert "_json_ld_text(page)" in src, \
-        "Jobvite must still read the shared JSON-LD block before its fallback"
+    for fn in (enrich_mod._from_breezy, enrich_mod._from_jobvite):
+        src = inspect.getsource(fn)
+        assert "_json_ld_text(page)" in src, \
+            f"{fn.__name__} must read the shared JSON-LD block before its fallback"
 
     page = ('<script type="application/ld+json">'
             '{"@type":"JobPosting","description":"<p>Shared</p><li>reader</li>"}'
