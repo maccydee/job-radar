@@ -216,30 +216,29 @@ def test_only_one_of_the_two_paths_carries_the_advert():
     assert all(len(j.description or "") > 500 for j in company)
 
 
-def test_the_recent_sweep_is_walked_to_exhaustion_not_capped():
-    """The keyword search caps at fifteen pages because a broad title could
-    page for ever and the title filter discards most of it anyway. This one is
-    a sweep whose entire job is completeness, so a cap is precisely what would
-    silently drop its tail: 21,062 postings in a week is over a thousand
-    pages, and stopping at fifteen returns the first 300 and looks finished.
+def test_the_recent_sweep_is_capped_inside_the_host_budget_and_says_so():
+    """This used to assert the opposite: that the sweep was walked to
+    exhaustion, because a cap would silently drop the tail of a sweep whose
+    job is completeness. 21,062 postings in a week is over a thousand pages.
 
-    The window is the bound instead.
+    Both halves of that stopped being true. The cap is not silent: the pager
+    marks the result cut off and the scan names it. And the walk was not
+    complete in practice: every scan from 7 to 17 September 2026 ended with
+    jobs.workable.com refusing for up to a day, taking the sweep and most of
+    the keyword searches with it. A thousand pages is several times what
+    Workable's infrastructure has been seen to allow in one run.
+
+    So what is pinned is the budget arithmetic, read from the module rather
+    than grepped out of the dispatcher, and the walk itself is exercised in
+    tests/test_workable_search_budget.py.
     """
-    import inspect
-    import re
-
     from jobradar import fetch as fetch_mod
 
-    body = inspect.getsource(fetch_mod._fetch_dispatch)
-    i = body.index('"workable_recent"')
-    # Wide enough to clear the comment above the call, which explains
-    # why the budget is what it is and is longer than the call.
-    call = body[i:i + 2000]
-    m = re.search(r"max_pages=(\d+)", call)
-    assert m, "the recent sweep no longer sets its own page budget"
-    assert int(m.group(1)) >= 1000, (
-        f"capped at {m.group(1)} pages, which truncates a sweep that exists "
-        f"to be complete")
+    cap = fetch_mod.WORKABLE_RECENT_MAX_PAGES
+    budget = fetch_mod.HOST_REQUEST_BUDGET["jobs.workable.com"]
+    assert 0 < cap <= budget // 2, (
+        f"the sweep may take {cap} of a {budget} request budget, leaving the "
+        f"reader's own keyword searches too little")
 
 
 def test_the_recent_sweep_and_the_keyword_search_are_told_apart():

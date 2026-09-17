@@ -56,8 +56,8 @@ class Result:
     # is the right guard and the wrong thing to be silent about: a result that
     # is the first N of an unknown number reads exactly like a complete one,
     # which is the failure-that-looks-like-success this file keeps producing.
-    # `ok` stays True — the rows that came back are real, there are just more
-    # of them — so this is a fact ABOUT a good result, like `throttled`, not a
+    # `ok` stays True (the rows that came back are real, there are just more
+    # of them), so this is a fact ABOUT a good result, like `throttled`, not a
     # kind of failure. See `capped_sources`.
     truncated: bool = False
 
@@ -90,6 +90,16 @@ PER_HOST_RPS = {
     # quota: a burst of 90 requests passes at 3.0/s and a sustained 1.5/s is
     # refused at request 301. See docs/PLATFORMS.md.
     "apply.workable.com": 0.7,
+    # Workable's other host, and a ceiling rather than a measurement: nobody
+    # has measured this host's limit, and nobody should go and find it. It ran
+    # at the 3.0 default, which no evidence ever justified, and every scan from
+    # 7 to 17 September 2026 ended with it refusing for 11 to 24 hours.
+    # 0.7 because it is the same company's infrastructure as the line above,
+    # and 0.7 is the fastest rate at which that host has been seen to take a
+    # run of 250 requests without a refusal (1.5/s was refused at the 301st).
+    # Pacing alone does not fix a quota, though, which is why
+    # `HOST_REQUEST_BUDGET` exists as well.
+    "jobs.workable.com": 0.7,
     # These three were 3.0 by default, and 3.0 was never measured. It entered
     # in the commit that introduced per-host pacing, whose own sentence cites
     # evidence for Workable's 0.7 and none for this one. Only six hosts are
@@ -109,6 +119,52 @@ PER_HOST_RPS = {
     # publishes 10 requests a second for most endpoints, and tolerated 7.75.
     "api.smartrecruiters.com": 8.0,
 }
+
+# How many requests one run may send a host whose limit is a quota rather than
+# a rate. Counted per `HostLimiter`, which is one per `fetch_all`, and a scan's
+# jobs.workable.com sources all sit in its first pass, so in practice this is
+# per scan. Retries count: a retry is a request as far as the host is concerned.
+#
+# Why a count and not only a slower pace. Workable's limit behaves like a
+# budget over a long window, and a budget is spent by requests however slowly
+# they arrive: apply.workable.com refused from the 176th request of a run paced
+# at 0.7/s, and at the 301st of one paced at 1.5/s. A rate table cannot see
+# where a run is in that window. A count can.
+#
+# What jobs.workable.com was being sent. One scan with twelve titles and four
+# countries expands the keyword search into 48 walks of up to 15 pages, and the
+# recently-posted sweep was walked to exhaustion: 21,062 postings in a week is
+# 1,054 pages. So roughly 1,100 to 1,800 requests, at 3.0/s, all inside the
+# first pass. On 17 September the scan log was created at 09:43:12 and the
+# 24-hour block was written at 09:45:57, which at 3.0/s is at most about 500
+# requests in, and plausibly the same few hundred that apply.workable.com
+# allows. Every scan since 7 September ended the same way, and the refusal
+# takes out every search there, not only the one that tripped it.
+#
+# 150, and a ceiling rather than a measurement: under the lowest refusal ever
+# seen on Workable's infrastructure (the 176th request), deliberately not
+# measured here, because finding this host's real number costs a day of it.
+# When it is spent the remaining sources there come back UNKNOWN and the scan
+# says so; a walk it stops part way through keeps its rows and is marked cut
+# off. Lower it freely. Raise it only on evidence, and never by probing.
+HOST_REQUEST_BUDGET = {
+    "jobs.workable.com": 150,
+}
+
+# Pages of the recently-posted sweep a scan reads, out of the host budget above.
+#
+# It used to be 2,000, so that a week of Workable (1,054 pages) was read in
+# full. That walk alone is seven times the budget, and it starts within the
+# first two hundred tasks of the first pass, so uncapped it would spend the
+# whole budget before most of the keyword searches had started and leave them
+# UNKNOWN on every scan. The searches are the reader's own titles in the
+# reader's own countries; the sweep is 21,062 postings of which the title
+# filter keeps under one in a hundred. So the sweep is held to a slice and the
+# searches keep the rest: 30 pages, 600 postings, leaving 120 requests for
+# the searches, which need 48 first pages on a twelve-title, four-country
+# config. When the cap bites the result is marked cut off and the scan says so,
+# which is the thing the old uncapped walk was protecting against.
+WORKABLE_RECENT_MAX_PAGES = 30
 
 # Workers, not requests per second. Politeness is the limiter's job now, so
 # this number only decides how many DIFFERENT hosts are in flight at once, and
@@ -179,7 +235,14 @@ class HostLimiter:
     """
 
     def __init__(self, rps: float | None = None,
-                 overrides: dict[str, float] | None = None) -> None:
+                 overrides: dict[str, float] | None = None,
+                 budgets: dict[str, int] | None = None) -> None:
+        # Requests this limiter may still send each budgeted host, and how
+        # many sources it turned away once a budget ran out. See
+        # `HOST_REQUEST_BUDGET` and `spend`.
+        self.budgets = dict(HOST_REQUEST_BUDGET if budgets is None else budgets)
+        self._spent: dict[str, int] = defaultdict(int)
+        self._turned_away: dict[str, int] = defaultdict(int)
         # Whether the caller ASKED for this rate or simply got it. `gap_for`
         # needs to tell those apart, and a bare float cannot: a caller passing
         # 3.0 deliberately and a caller passing nothing arrived identical.
@@ -293,6 +356,37 @@ class HostLimiter:
                           MAX_HOST_SLOWDOWN)
             self._slowdown[host] = widened
         return widened
+
+    def spend(self, url: str) -> bool:
+        """Take one request from this host's budget. False if none is left.
+
+        Called for every request actually about to be sent, retries included,
+        and before the pacing wait so a source turned away does not first
+        claim a slot and sleep in it. A host with no budget always answers
+        True: the budget is for quotas, and pacing is still the rule
+        everywhere else.
+        """
+        host = urlparse(url).netloc
+        cap = self.budgets.get(host)
+        if cap is None:
+            return True
+        with self._lock:
+            if self._spent[host] >= cap:
+                self._turned_away[host] += 1
+                return False
+            self._spent[host] += 1
+            return True
+
+    def budgets_spent(self) -> dict[str, tuple[int, int]]:
+        """`{host: (budget, requests turned away)}` for each budget that ran out.
+
+        Only hosts where something was actually refused for want of budget. A
+        run that used exactly its budget and then had nothing left to ask
+        lost nothing, and saying otherwise would be noise.
+        """
+        with self._lock:
+            return {h: (self.budgets[h], n)
+                    for h, n in self._turned_away.items() if n}
 
     def slowdown_for(self, url: str) -> float:
         """How much this host's configured gap is currently multiplied by."""
@@ -681,6 +775,21 @@ def fetch_one(
                         src, error=f"HTTP 429, host blocked for another "
                                    f"{int(left)}s", status=429,
                         elapsed=time.time() - t0, throttled=True)
+            # A host whose limit is a quota gets a fixed number of requests a
+            # run, checked here so a retry spends from it like anything else.
+            # Throttled, not an error of the board's: this is us declining to
+            # ask, which is exactly as unknown as the host declining to
+            # answer, and `validate --prune` and `detect_throttling` both
+            # already read `throttled` as "cannot say". No figure followed by
+            # an "s" in the text, because `cmd_scan` reads one out of a
+            # throttled error as the host's block length and would print a
+            # wait that nobody asked for.
+            if lim is not None and not lim.spend(src.url):
+                return Result(
+                    src, error="not asked: this run's request budget for "
+                               "this host is spent, so this source is "
+                               "unknown today rather than empty",
+                    status=None, elapsed=time.time() - t0, throttled=True)
             # Inside the retry loop, so a retry is paced like a first attempt.
             # A source that just answered 429 is the last one that should be
             # allowed to skip the queue on its way back in.
@@ -1042,9 +1151,12 @@ def fetch_workable_search(
     a very broad title, not a sample: when it does bite, the scan says so
     rather than quietly returning the first 300.
 
-    Deliberately a different host from apply.workable.com, so the per-host
-    pacing that exists for the 2,094 boards does not also throttle this, and
-    a block on one does not silently take out the other.
+    Deliberately a different host from apply.workable.com, so a block on one
+    does not silently take out the other and the two queues do not wait on
+    each other. Not a faster one, though: it is the same company's
+    infrastructure, it refused for a day at the end of every scan run at 3.0/s,
+    and it is now paced like the boards and capped per run by
+    `HOST_REQUEST_BUDGET`. See `PER_HOST_RPS`.
     """
     session = _thread_session()
     merged: dict[str, dict] = {}
@@ -1069,6 +1181,13 @@ def fetch_workable_search(
                 first_error = Result(src, error=res.error or "bad payload",
                                      status=res.status, throttled=res.throttled,
                                      transport=res.transport)
+            # A walk that already has pages and then stops on a refusal, a
+            # block or a spent budget has NOT reached the end of the search:
+            # the token said there was more. It used to return those pages
+            # with `truncated` False, so a search refused on page three read
+            # as a complete two-page answer.
+            if merged:
+                truncated = True
             break
         jobs = res.payload.get("jobs") or []
         total = max(total, int(res.payload.get("totalSize") or 0))
@@ -2185,6 +2304,23 @@ def fetch_all(
             x = limiter.slowdown_for(f"https://{host}/")
             print(f"  ! {host} refused during this run, so it was read "
                   f"{x:.0f}x slower than usual by the end", flush=True)
+
+        # Say which hosts ran out of budget, and what that cost.
+        #
+        # A source turned away for want of budget comes back throttled, so it
+        # is never stored as an empty board, but `cmd_scan` only names a host
+        # when the error carries a block length, and there is none here. Left
+        # unsaid, the reader would see a few employers in the "look throttled"
+        # list and no reason for it, and a search cut off part way would sit in
+        # the "cut off at the page limit" list as though the page cap had bitten.
+        for host, (cap, _) in sorted(limiter.budgets_spent().items()):
+            mine = [r for r in out if urlparse(r.source.url).netloc == host]
+            unread = sum(1 for r in mine if not r.ok)
+            partial = sum(1 for r in mine if r.ok and r.truncated)
+            print(f"  ! {host} limits requests over a long window, so a run may "
+                  f"send it {cap} and this one used them all: {unread} "
+                  f"source(s) there are UNKNOWN today, not empty, and "
+                  f"{partial} came back incomplete.", flush=True)
     return out
 
 
@@ -2209,15 +2345,18 @@ def _fetch_dispatch(src, limiter, timeout, retries, ua, terms, keys=None) -> Res
         return fetch_workable_search(src, timeout=timeout, retries=retries,
                                      user_agent=ua)
     if src.platform == "workable_recent":
-        # Walked to exhaustion, not capped. The keyword search caps at fifteen
-        # pages because a very broad title could otherwise page for ever and
-        # the title filter discards most of it anyway. This one is a sweep
-        # whose entire job is completeness, so a cap is the thing that would
-        # silently drop its tail: 21,062 postings in a week is 1,054 pages,
-        # and stopping at fifteen would return the first 300 and look
-        # finished. The window is the bound instead.
+        # Capped, and not silently. It used to be walked to exhaustion, 1,054
+        # pages for a week, on the grounds that a cap would quietly drop the
+        # tail of a sweep whose job is completeness. Two things changed that.
+        # The walk is most of what a scan sends jobs.workable.com, and every
+        # scan from 7 to 17 September ended with that host refusing for up to
+        # a day, which left the sweep AND most keyword searches unknown, so
+        # "complete" was never what it delivered. And a cap is no longer silent: the pager
+        # marks the result cut off and the scan names it. See
+        # `WORKABLE_RECENT_MAX_PAGES` for why the searches keep most of the budget.
         return fetch_workable_search(src, timeout=timeout, retries=retries,
-                                     user_agent=ua, max_pages=2000)
+                                     user_agent=ua,
+                                     max_pages=WORKABLE_RECENT_MAX_PAGES)
     if src.platform == "phenom":
         return fetch_phenom(src, terms, timeout=timeout, retries=retries,
                             user_agent=ua)
