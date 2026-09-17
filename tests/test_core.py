@@ -5331,8 +5331,11 @@ def test_two_requests_to_the_same_host_are_spaced_by_the_configured_gap():
     # an upper bound on a wall clock is a machine-load assertion and CLAUDE.md
     # forbids one. A lower bound cannot flake in the same way, because
     # time.sleep guarantees at least its argument, so the only way to fail it
-    # is for the gap not to be waited out, which is the bug.
-    assert spent >= 0.15 - 0.01, f"four requests took only {spent:.3f}s"
+    # is for the gap not to be waited out, which is the bug. Except that the
+    # clock reading it can: Windows ticks every ~16ms, and on 17 September
+    # 2026 it measured two 0.2s sleeps elsewhere in this file as under 0.39s.
+    # So the tolerance is two ticks, still far above the ~0s of no pacing.
+    assert spent >= 0.15 - 0.035, f"four requests took only {spent:.3f}s"
 
 
 def test_two_requests_to_different_hosts_do_not_wait_for_each_other():
@@ -5719,8 +5722,13 @@ def test_enrichment_fetches_in_parallel_but_writes_from_one_thread():
 
 def test_enrichment_at_concurrency_one_still_honours_the_pause():
     """`--pause` is a documented flag and someone on a slow line will have set
-    it. Making the pass parallel must not quietly stop obeying it."""
-    import time
+    it. Making the pass parallel must not quietly stop obeying it.
+
+    Counts the sleeps rather than timing the run. This used to assert on
+    `time.monotonic()`, and Windows CI measured two 0.2s sleeps as under
+    0.39s on 17 September 2026 because its clock ticks every ~16ms: a
+    timing test is flaky by construction, which CLAUDE.md already said."""
+    from unittest import mock
 
     from jobradar import enrich, store
 
@@ -5739,16 +5747,16 @@ def test_enrichment_at_concurrency_one_still_honours_the_pause():
     old = dict(enrich.FETCHERS)
     enrich.FETCHERS["smartrecruiters"] = (
         lambda url, session=None, timeout=20: "y" * 400)
+    slept = []
     try:
-        t0 = time.monotonic()
-        got, tried = enrich.run(con, None, rows, pause=0.2, concurrency=1)
-        spent = time.monotonic() - t0
+        with mock.patch.object(enrich.time, "sleep", slept.append):
+            got, tried = enrich.run(con, None, rows, pause=0.2, concurrency=1)
     finally:
         enrich.FETCHERS.clear()
         enrich.FETCHERS.update(old)
 
     assert (got, tried) == (3, 3)
-    assert spent >= 0.4 - 0.01, f"three rows at a 0.2s pause took {spent:.2f}s"
+    assert slept.count(0.2) == 2, f"three rows should pause twice, slept {slept}"
 
 
 def test_validate_paces_each_host_because_it_is_the_command_that_deletes():
