@@ -3809,9 +3809,15 @@ def test_an_unlabelled_reed_day_rate_is_not_read_as_an_annual_salary():
 
 def test_a_reed_salary_type_is_used_when_the_details_endpoint_gives_one():
     """The details endpoint states `salaryType` and its own annualisation.
-    Reed's figures beat ours, and a weekly or monthly rate has no `period` to
-    live in, so it is annualised rather than dropped: a rate this tool cannot
-    express is a rate the floor cannot act on, which quietly loses the role."""
+    The rate is kept in the unit the employer wrote, and a weekly or monthly
+    rate has no `period` to live in, so it is annualised rather than dropped:
+    a rate this tool cannot express is a rate the floor cannot act on, which
+    quietly loses the role.
+
+    Reed's own yearly figures used to win here. That was written against the
+    documentation before any live call, and a live details payload (17 Sept
+    2026) showed them to be Reed's 260-day and 1,950-hour arithmetic: a
+    700 to 1,250 per day contract stored as 182,000 to 325,000 "per year"."""
     from jobradar.salary import from_reed
 
     hourly = from_reed({"minimumSalary": 45.0, "maximumSalary": 60.0,
@@ -3828,8 +3834,13 @@ def test_a_reed_salary_type_is_used_when_the_details_endpoint_gives_one():
                         "yearlyMinimumSalary": 79200.0,
                         "yearlyMaximumSalary": 105600.0,
                         "currency": "GBP", "salaryType": "per hour"})
-    assert yearly.period == "year" and yearly.max == 105600.0, \
-        "Reed's own annualisation wins over doing it here"
+    assert (yearly.period, yearly.min, yearly.max) == ("hour", 45.0, 60.0), \
+        "Reed's own annualisation is ignored; the stated hourly rate is kept"
+
+    odd = from_reed({"minimumSalary": 45.0, "maximumSalary": 60.0,
+                     "currency": "GBP", "salaryType": "per shift"})
+    assert odd.confirmed is False and odd.max == 60.0, \
+        "a salaryType nobody mapped is shown, not guessed at as annual"
 
 
 def test_a_reed_role_with_a_hidden_salary_is_shown_not_dropped():

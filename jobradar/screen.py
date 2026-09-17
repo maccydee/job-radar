@@ -1910,6 +1910,34 @@ def _all_mentions_incidental(pattern, text: str, title: str = "") -> bool:
     return bool(hits) and all(_mention_is_incidental(text, m.start()) for m in hits)
 
 
+# Reed's search endpoint does not return the advert. It returns the first 453
+# characters of it with "... " welded on, whatever the advert's length, and
+# after entity decoding and whitespace folding that is stored as 436 to 452
+# characters. That clears the 200-character "barely screened" line below, so
+# for as long as nothing else looked, every Reed role read as screened: 21 of
+# 21 in the real database on 17 Sept 2026, including two manufacturing
+# "Interim Engineering Manager" roles the dealbreakers would have caught and a
+# "This is a hands-on delivery role, not a pure..." cut mid-sentence.
+#
+# Recognised by shape rather than by a "was enriched" marker, because there is
+# no such column and the shape is the fact that matters: a Reed description
+# that is short AND ends in the ellipsis is the extract, and a full advert
+# fetched from the details endpoint is neither. A genuinely short advert that
+# Reed returned whole has no ellipsis to strip and is not flagged. The ceiling
+# sits a little above 453 so that a small change on Reed's side does not
+# silently stop the check matching anything.
+REED_SNIPPET_MAX = 500
+
+
+def is_reed_snippet(platform: str | None, description: str | None) -> bool:
+    """True when a stored Reed description is the search extract, not the advert."""
+    if (platform or "") != "reed":
+        return False
+    text = (description or "").strip()
+    return (0 < len(text) <= REED_SNIPPET_MAX
+            and (text.endswith("...") or text.endswith("…")))
+
+
 def screen(job: Job, cfg: Config) -> tuple[bool, list[str]]:
     """Dealbreaker scan over the description. Returns (keep, hits)."""
     # Warn on a posting too thin to have been screened properly, but still run
@@ -1931,6 +1959,15 @@ def screen(job: Job, cfg: Config) -> tuple[bool, list[str]]:
             "not screened: no description from this source" if not text else
             f"barely screened: this source gave {len(text)} characters of "
             f"advert, too little to check properly")
+    elif is_reed_snippet(job.platform, text):
+        # Worded with "barely screened" on purpose: `cli._about_missing_text`
+        # keys on it, so `_rescreen` drops this once the full advert is stored
+        # and puts it straight back on a role whose details fetch failed. Said
+        # without claiming why, because the same words have to be true at scan
+        # time, before any fetch was tried.
+        job.flags.append(
+            f"barely screened: Reed's search gave only a {len(text)}-character "
+            f"extract of this advert and the full text has not been read")
 
     # The title and the location are read too, and they were not.
     #

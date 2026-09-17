@@ -621,8 +621,107 @@ def _from_pcsx(url: str, session=None, timeout: int = 20) -> str:
     return _strip(data.get("jobDescription") or "")
 
 
+class Details(str):
+    """An advert text that also carries structured fields from its source.
+
+    A `str` subclass so that every caller of a fetcher, `_try` included, keeps
+    treating it as the text it always was, and only `run()` looks further.
+    Reed is the first fetcher whose per-job response states pay and contract
+    type as fields rather than prose, and throwing those away to fit the
+    string-only contract would leave the day rate exactly as unlabelled as
+    the search left it.
+
+    `error` is set on a FAILED fetch and the text is then "". It exists so a
+    refusal can be told apart from an advert that is simply not there: a 401
+    means the key is wrong for every Reed role in the run, not that this one
+    posting has no description.
+    """
+
+    salary = None
+    employment = ""
+    error = ""
+    refused = False
+
+    @classmethod
+    def make(cls, text: str = "", *, salary=None, employment: str = "",
+             error: str = "", refused: bool = False) -> "Details":
+        d = cls(text or "")
+        d.salary, d.employment = salary, employment
+        d.error, d.refused = error, refused
+        return d
+
+
+# Reed's per-job endpoint. The search endpoint returns a 453 character extract
+# and a bare figure with no period (checked on 17 Sept 2026: its result rows
+# carry jobId, employerId, employerName, employerProfileId,
+# employerProfileName, jobTitle, locationName, minimumSalary, maximumSalary,
+# currency, date, expirationDate, jobDescription, applications and jobUrl, and
+# nothing else). This one carries the whole advert as HTML, `salaryType`,
+# `contractType` and `externalUrl`.
+REED_JOB_API = "https://www.reed.co.uk/api/1.0/jobs/{job_id}"
+_REED_ID = re.compile(r"reed\.co\.uk/jobs/(?:[^/?#]+/)?(\d+)(?:[/?#]|$)", re.I)
+
+
+def reed_details(payload) -> Details:
+    """The parts of a Reed details response that `run()` stores.
+
+    Split from the request so that a captured payload can be tested without a
+    key or a network.
+
+    `externalUrl`, the employer's own apply link, is not read. The roles table
+    has no column for an apply link separate from the posting URL, and
+    overwriting `url` with it would change the uid-bearing address of a role
+    already on the board.
+    """
+    from . import employment as emp_mod
+    if not isinstance(payload, dict):
+        return Details.make(error="details response was not an object")
+    text = _strip(payload.get("jobDescription") or "")
+    # Only a salaryType Reed actually stated can confirm a figure: see
+    # `salary.from_reed`, which leaves an unknown one unconfirmed.
+    sal = sal_mod.from_reed(payload)
+    # "Temporary" is what Reed sends for both a day-rate contract and a
+    # 12-month fixed term (Techtronic's "Security & Network Engineer - 12
+    # months Fixed term" arrived as Temporary), and "Permanent" for a
+    # permanent job. `from_platform` already maps both, and anything it does
+    # not know stays unstated rather than being read as one of the two.
+    emp = emp_mod.from_platform(payload.get("contractType"))
+    return Details.make(text, salary=sal, employment=emp)
+
+
+def _from_reed(url: str, session=None, timeout: int = 20,
+               api_key: str = "") -> Details:
+    m = _REED_ID.search(url or "")
+    if not m:
+        return Details.make(error="no Reed job id in the URL")
+    if not api_key:
+        # Not asked at all. Reed answers an unkeyed request with 401, and
+        # sending one per role to learn what is already known is impolite.
+        return Details.make(error="no Reed API key", refused=True)
+    get = (session or requests).get
+    try:
+        # Auth on the REQUEST, never on the session. The session is the worker
+        # thread's and is reused for every other host that thread fetches, and
+        # `fetch_reed` records what setting `session.auth` once did: the key
+        # went out in the Authorization header to thousands of third parties.
+        r = get(REED_JOB_API.format(job_id=m.group(1)), auth=(api_key, ""),
+                headers={"Accept": "application/json"}, timeout=timeout)
+    except requests.RequestException as e:
+        return Details.make(error=f"request failed: {type(e).__name__}")
+    if r.status_code in (401, 403):
+        return Details.make(error=f"Reed refused the API key (HTTP {r.status_code})",
+                            refused=True)
+    if r.status_code != 200:
+        return Details.make(error=f"HTTP {r.status_code}")
+    try:
+        return reed_details(r.json())
+    except ValueError:
+        return Details.make(error="details response was not JSON")
+
+
 FETCHERS = {
     "linkedin": lambda u, s: fetch(u, session=s),
+    "reed": _from_reed,
     "workday": _from_workday,
     "smartrecruiters": _from_smartrecruiters,
     "breezy": _from_breezy,
@@ -735,10 +834,22 @@ def fetcher_for(url: str, platform: str = ""):
 
 
 def _floor_sql() -> str:
-    """`LENGTH(...) < <floor>`, with the per-platform stub floors folded in."""
+    """`LENGTH(...) < <floor>`, with the per-platform stub floors folded in.
+
+    Reed is not a stub floor. Its extract is a fixed 453 characters however
+    long the advert, so a floor would either miss it or refetch every short
+    advert Reed returned whole on every scan. The test is the same shape
+    `screen.is_reed_snippet` applies when it flags the role, kept beside it
+    in SQL so that "flagged as an extract" and "queued for its details" can
+    only disagree if someone edits one of them.
+    """
+    from .screen import REED_SNIPPET_MAX
     cases = " ".join(f"WHEN '{p}' THEN {n}" for p, n in STUB_FLOORS.items())
-    return (f"LENGTH(TRIM(COALESCE(r.description,''))) < "
-            f"CASE r.platform {cases} ELSE {MIN_DESC} END")
+    desc = "TRIM(COALESCE(r.description,''))"
+    return (f"(LENGTH({desc}) < "
+            f"CASE r.platform {cases} ELSE {MIN_DESC} END "
+            f"OR (r.platform = 'reed' AND LENGTH({desc}) <= {REED_SNIPPET_MAX} "
+            f"AND ({desc} LIKE '%...' OR {desc} LIKE '%\u2026')))")
 
 
 def candidates(con, limit: int = 0) -> list:
@@ -746,6 +857,9 @@ def candidates(con, limit: int = 0) -> list:
     store._ensure_columns(con)
     likes = [like for _pat, like, _fn in URL_FETCHERS]
     q = ("SELECT r.uid, r.url, r.platform, r.salary_confirmed, r.country, "
+         # Title and employment so that a platform-stated contract type can
+         # be applied with the same precedence `screen.enrich` uses.
+         "r.title, r.employment, "
          # The stored length comes back with the row so that `run()` can
          # refuse to replace a long advert with a short one. Without it the
          # stub floors would happily overwrite Oracle's 653 character teaser
@@ -766,37 +880,103 @@ def candidates(con, limit: int = 0) -> list:
 
 
 def run(con, cfg=None, rows=None, pause: float = 1.0, on_each=None,
-        concurrency: int = fetch_mod.DEFAULT_CONCURRENCY) -> tuple[int, int]:
+        concurrency: int = fetch_mod.DEFAULT_CONCURRENCY,
+        notes: list | None = None) -> tuple[int, int]:
     """Fill in descriptions. Returns (fetched, attempted).
 
     Re-parses pay while it is there: a posting that states a salary in its body
     was being carried as "unconfirmed" purely because the body had never been
     read, which meant the floor could not act on it either.
+
+    `notes`, when given, collects sentences about failures a caller should
+    print. A fetch that fails writes nothing and so leaves no trace in the
+    database, which for most fetchers is fine: the role stays short and stays
+    flagged. A refused API key is different in kind, because it fails every
+    Reed role at once for a reason the reader can fix, and a count of
+    "filled in 0 of 21" does not say that.
     """
     rows = candidates(con) if rows is None else rows
+    keys = {"reed": getattr(cfg, "reed_api_key", "") or ""} if cfg else {}
     got = 0
-    for i, r, text in _texts(rows, pause, concurrency):
+    failed: dict[str, int] = {}
+    for i, r, text in _texts(rows, pause, concurrency, keys):
+        err = getattr(text, "error", "")
+        if err and (r["platform"] or "") == "reed":
+            failed[err] = failed.get(err, 0) + 1
         if text and len(text) >= MIN_DESC and len(text) > _stored_len(r):
             got += 1
             fields = {"description": text[:20000]}
-            # The job's country, never the reader's floor currency. See
-            # `salary.CURRENCY_OF_COUNTRY` for what that was doing to a
-            # posting priced in rupees.
-            s = sal_mod.parse_text(
-                text, sal_mod.currency_of_country(
-                    r["country"] if "country" in r.keys() else None))
-            if s.confirmed and not r["salary_confirmed"]:
+            stated = getattr(text, "salary", None)
+            if stated is not None and stated.confirmed:
+                # A pay field the platform stated for THIS posting replaces
+                # whatever is stored, confirmed or not. What is stored for a
+                # Reed role came off the search endpoint, which has no period,
+                # so it is at best a guess that a big number is annual and at
+                # worst a day rate filed as "year". The salaryType beside the
+                # figure is the employer's own answer.
+                s = stated
+            else:
+                # The job's country, never the reader's floor currency. See
+                # `salary.CURRENCY_OF_COUNTRY` for what that was doing to a
+                # posting priced in rupees.
+                s = sal_mod.parse_text(
+                    text, sal_mod.currency_of_country(
+                        r["country"] if "country" in r.keys() else None))
+                if r["salary_confirmed"]:
+                    s = None
+            if s is not None and s.confirmed:
                 fields.update({
                     "salary_min": s.min, "salary_max": s.max,
                     "salary_currency": s.currency, "salary_period": s.period,
                     "salary_confirmed": 1, "salary_label": s.label(),
                 })
+            emp = _employment(r, getattr(text, "employment", ""), text)
+            if emp:
+                fields["employment"] = emp
             con.execute(
                 "UPDATE roles SET " + ",".join(f"{k}=?" for k in fields)
                 + " WHERE uid=?", (*fields.values(), r["uid"]))
         if on_each:
             on_each(i, len(rows), got)
+    if notes is not None:
+        for err, n in sorted(failed.items(), key=lambda kv: -kv[1]):
+            notes.append(f"{n} Reed role(s) kept their search extract: {err}")
     return got, len(rows)
+
+
+def _employment(row, stated: str, text: str) -> str:
+    """The employment value to write after enrichment, or "" to leave it.
+
+    Same precedence as `screen.enrich`, which only ever sees the extract for a
+    Reed role: a title that says contract outright wins, then the platform's
+    own field, then the full advert's text. "" rather than `unstated` when
+    nothing decided it, because a writer that could not classify a posting is
+    missing the answer, not contradicting the one already stored.
+
+    The text rule only fills a gap. A stored `permanent` or `contract` may
+    have come from a platform's own field on the scan (Workable, Ashby,
+    SmartRecruiters and the rest), and nothing in the row says which, so a
+    regex over the prose must not replace it.
+    """
+    from . import employment as emp_mod
+    keys = row.keys() if hasattr(row, "keys") else ()
+    title = row["title"] if "title" in keys else ""
+    if not title:
+        # A caller's own query without the title cannot apply the title rule,
+        # and applying the other two without it could overwrite a contract
+        # title with a platform "Permanent".
+        return ""
+    by_title, _ = emp_mod.classify(title)
+    if by_title == emp_mod.CONTRACT:
+        value = emp_mod.CONTRACT
+    elif stated and stated != emp_mod.UNSTATED:
+        value = stated
+    else:
+        stored = row["employment"] if "employment" in keys else ""
+        if (stored or emp_mod.UNSTATED) != emp_mod.UNSTATED:
+            return ""
+        value, _ = emp_mod.classify(title, text)
+    return "" if value == emp_mod.UNSTATED else value
 
 
 def _stored_len(row) -> int:
@@ -812,7 +992,7 @@ def _stored_len(row) -> int:
         return 0
 
 
-def _texts(rows, pause: float, concurrency: int):
+def _texts(rows, pause: float, concurrency: int, keys: dict | None = None):
     """Yield (position, row, advert text) with the fetching done in parallel.
 
     This pass used to be strictly serial with a fixed one second sleep between
@@ -829,18 +1009,40 @@ def _texts(rows, pause: float, concurrency: int):
     `pause` still works and still means what it said, for anyone who set it,
     and passing concurrency=1 restores the old behaviour exactly.
     """
+    keys = keys or {}
+    # Set on the first refusal of the Reed key. Every later Reed role in the
+    # run would be refused for the same reason, so they are not asked: that
+    # is the "stop after a failure" rule applied to a failure that is certain
+    # to repeat, and it keeps a wrong key from costing one 401 per role.
+    reed_refused = threading.Event()
+    refusal: list = []
+
     def _try(chain, url, session) -> str:
         """The first fetcher in the chain that returns something.
 
         At most two requests for a role, and only when the second fetcher is
         a different one reading a different system: a role whose platform
         fetcher and URL fetcher are the same function is asked once.
+
+        A failure that says why (a `Details` with `error`) is returned rather
+        than flattened to "", so `run()` can report it.
         """
+        last = ""
         for fn in chain:
-            text = fn(url, session)
+            if fn is _from_reed:
+                if reed_refused.is_set():
+                    return refusal[0] if refusal else Details.make(
+                        error="Reed refused the API key", refused=True)
+                text = fn(url, session, api_key=keys.get("reed", ""))
+                if getattr(text, "refused", False):
+                    refusal[:1] = [text]
+                    reed_refused.set()
+            else:
+                text = fn(url, session)
             if text:
                 return text
-        return ""
+            last = text if getattr(text, "error", "") else last
+        return last
 
     fetchers = [(i, r, fetcher_for(r["url"], r["platform"]))
                 for i, r in enumerate(rows, 1)]

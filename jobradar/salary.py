@@ -746,6 +746,7 @@ def from_pinpoint(posting: dict | None) -> Salary:
 # What Reed's `salaryType` says, in the vocabulary Salary understands.
 _REED_PERIOD = {
     "per annum": "year", "annum": "year", "annual": "year", "annually": "year",
+    "per year": "year", "year": "year", "yearly": "year",
     "per day": "day", "day": "day", "daily": "day",
     "per hour": "hour", "hour": "hour", "hourly": "hour",
 }
@@ -771,20 +772,34 @@ _REED_MIN_ANNUAL = 2000.0
 def from_reed(job: dict | None) -> Salary:
     """Reed publishes pay as numbers, but which numbers depends on the endpoint.
 
-    The details endpoint states `yearlyMinimumSalary` / `yearlyMaximumSalary`,
-    which is Reed's own annualisation and is preferred over doing it here.
-    The search endpoint states neither those nor `salaryType`, so an unlabelled
-    figure is only trusted as annual when it is big enough to be one.
+    The details endpoint states `salaryType` ("per annum", "per day", "per
+    hour" were the values seen on 17 Sept 2026) next to `minimumSalary` and
+    `maximumSalary`, and that is what is read: the figure in the unit the
+    employer wrote it in. The search endpoint states no period at all, so an
+    unlabelled figure is only trusted as annual when it is big enough to be
+    one.
 
-    An unlabelled rate comes back UNCONFIRMED rather than as a guess. That is
-    the safe direction: an unconfirmed salary is shown to the reader and can
-    never disqualify a role, whereas a wrongly annualised one silently deletes
-    it. `parse_reed` then gets a second go at it from the advert text, which
-    does say "per day".
+    `yearlyMinimumSalary` / `yearlyMaximumSalary` are deliberately ignored.
+    They used to win, and they are Reed's own annualisation on Reed's own day
+    count: SF Partners' 700 to 1,250 per day came back as 182,000 to 325,000
+    a year (260 days) and a 45 to 50 per hour contract as 87,750 to 97,500
+    (1,950 hours). Stored that way the dashboard said "per year" about a day
+    rate, and the floor compared a number `Salary.annualised` would have
+    computed differently for every other platform's day rates.
 
-    Reed also lets an employer hide the salary, in which case none of these
-    fields are populated at all. That is "the employer published no figure",
-    not a parse failure, and it must stay unconfirmed for the same reason.
+    A `salaryType` this table does not know comes back UNCONFIRMED, with the
+    figures kept for the reader. Guessing "year" for it is how a day rate
+    becomes a salary of 700 that any floor bins.
+
+    An unlabelled rate comes back unconfirmed for the same reason: an
+    unconfirmed salary is shown to the reader and can never disqualify a
+    role, whereas a wrongly annualised one silently deletes it. `parse_reed`
+    then gets a second go at it from the advert text, which may say "per
+    day".
+
+    Reed also lets an employer hide the salary, in which case the figures are
+    null even though `salaryType` is still set. That is "the employer
+    published no figure", not a parse failure, and it must stay unconfirmed.
     """
     if not isinstance(job, dict):
         return Salary()
@@ -799,26 +814,28 @@ def from_reed(job: dict | None) -> Salary:
     raw = str(job.get("salary") or "").strip()[:120] or None
     currency = str(job.get("currency") or "").strip().upper() or None
 
-    lo, hi = _amt("yearlyMinimumSalary"), _amt("yearlyMaximumSalary")
-    period = "year"
-    if lo is None and hi is None:
-        lo, hi = _amt("minimumSalary"), _amt("maximumSalary")
-        stype = str(job.get("salaryType") or "").strip().lower()
-        mult = _REED_ANNUALISE.get(stype)
-        if mult is not None:
-            lo = lo * mult if lo is not None else None
-            hi = hi * mult if hi is not None else None
-        elif stype:
-            period = _REED_PERIOD.get(stype, "year")
-        else:
-            top = hi if hi is not None else lo
-            if top is not None and top < _REED_MIN_ANNUAL:
-                return Salary(min=lo, max=hi if hi is not None else lo,
-                              currency=currency, period="year", raw=raw,
-                              confirmed=False)
-
+    lo, hi = _amt("minimumSalary"), _amt("maximumSalary")
     if lo is None and hi is None:
         return parse_text(raw)
+
+    period = "year"
+    stype = str(job.get("salaryType") or "").strip().lower()
+    mult = _REED_ANNUALISE.get(stype)
+    if mult is not None:
+        lo = lo * mult if lo is not None else None
+        hi = hi * mult if hi is not None else None
+    elif stype in _REED_PERIOD:
+        period = _REED_PERIOD[stype]
+    elif stype:
+        return Salary(min=lo, max=hi if hi is not None else lo,
+                      currency=currency, period="year", raw=raw,
+                      confirmed=False)
+    else:
+        top = hi if hi is not None else lo
+        if top is not None and top < _REED_MIN_ANNUAL:
+            return Salary(min=lo, max=hi if hi is not None else lo,
+                          currency=currency, period="year", raw=raw,
+                          confirmed=False)
 
     return Salary(
         min=lo, max=hi if hi is not None else lo, currency=currency,

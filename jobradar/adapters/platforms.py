@@ -2837,6 +2837,14 @@ def parse_reed(payload: Any, src: Source) -> Iterator[Job]:
         form. Only the per-job details endpoint carries `externalUrl`, and
         that is one request per role. Each posting is flagged so the reader
         knows which kind of link they are following.
+      * The description is not the advert. Search returns a 453 character
+        extract ending in "... ", and no `salaryType` or `contractType` at
+        all (every key a search row carries was checked on 17 Sept 2026, and
+        none of them states a period). So pay here is the best guess
+        `from_reed` can make from a bare number, and `enrich._from_reed`
+        replaces the extract, the pay and the contract type from the details
+        endpoint afterwards. Until it has, `screen.is_reed_snippet` flags the
+        role as barely screened.
 
     Two failure modes worth stating. An empty `results` list means a search
     that matched nothing, which is also what a search for something misspelled

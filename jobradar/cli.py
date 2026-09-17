@@ -1210,7 +1210,12 @@ def _enrich_step(con, cfg) -> None:
     # `concurrency: 4` the old advice recommended, and honouring that number
     # here would take those runs from 16 workers down to 4 and turn two
     # minutes into eight.
-    got, tried = enrich.run(con, cfg, rows)
+    notes: list[str] = []
+    got, tried = enrich.run(con, cfg, rows, notes=notes)
+    for note in notes:
+        # Said out loud because a failed fetch writes nothing: a refused Reed
+        # key would otherwise show up only as a smaller "filled in" count.
+        _say(f"  ! {note}")
     if got:
         dropped = _rescreen(con, cfg)
         _say(f"  filled in {got} of {tried}; they can now be screened, ranked "
@@ -2263,12 +2268,26 @@ def cmd_enrich(args) -> int:
             if i % 10 == 0 or i == total:
                 _say(f"  {i}/{total}, {got} filled in")
 
+        notes: list[str] = []
         got, tried = enrich.run(con, cfg, rows, pause=args.pause or 0.0,
-                                on_each=progress, concurrency=workers)
+                                on_each=progress, concurrency=workers,
+                                notes=notes)
         _say(f"\nFilled in {got} of {tried}.")
+        for note in notes:
+            _say(f"  ! {note}")
         if got:
-            _say("They can now be screened, ranked and compared to your "
+            # Re-screened here too, not only in the scan's enrich step. This
+            # command used to fetch the advert and stop, so a role whose full
+            # text matched a hard dealbreaker, or whose newly stated day rate
+            # fell under the floor, stayed on the board until the next scan
+            # happened to run `_rescreen`, and the command that had just read
+            # the disqualifying sentence said "They can now be screened".
+            dropped = _rescreen(con, cfg)
+            _say("They have been re-screened against your dealbreakers and "
                  "salary floor. `job-radar rank` picks them up.")
+            if dropped:
+                _say(f"  {dropped} role(s) failed a rule once their text was "
+                     f"readable and have been hidden")
         return 0
     finally:
         con.close()

@@ -1,0 +1,39 @@
+{
+ "results": [
+  {
+   "jobId": 57332211,
+   "employerId": 106910,
+   "employerName": "SF Partners",
+   "employerProfileId": null,
+   "employerProfileName": null,
+   "jobTitle": "AI Enablement Lead - Software & Product Engineering - Urgent Contract (outside IR35)",
+   "locationName": "Manchester",
+   "minimumSalary": 700.0,
+   "maximumSalary": 1250.0,
+   "currency": "GBP",
+   "expirationDate": "22/10/2026",
+   "date": "10/09/2026",
+   "jobDescription": "AI Enablement Lead – Software &amp; Product Engineering 6 to 12 month contract | Up to 1,250 per day | Outside IR35 | Manchester or London | Hybrid We’re working with an established software and technology business looking to hire an AI Enablement Lead to help change the way its product and engineering teams build and deliver software. This is not an AI strategy role, a research role or traditional change management. We’re looking for someone ge... ",
+   "applications": 17,
+   "jobUrl": "https://www.reed.co.uk/jobs/ai-enablement-lead-software-product-engineering-urgent-contract-outside-ir35/57332211"
+  },
+  {
+   "jobId": 57300205,
+   "employerId": 575264,
+   "employerName": "Reed",
+   "employerProfileId": null,
+   "employerProfileName": null,
+   "jobTitle": "Engineering Manager",
+   "locationName": "SL38AQ",
+   "minimumSalary": 75000.0,
+   "maximumSalary": 100000.0,
+   "currency": "GBP",
+   "expirationDate": "02/10/2026",
+   "date": "02/09/2026",
+   "jobDescription": "Engineering Manager Annual Salary: 75,000 to 100,000+ Location: Slough Job Type: Full-time We are seeking an experienced Engineering Manager to lead a dynamic engineering team within a modern FMCG manufacturing facility. This role offers the opportunity to manage a maintenance manager, a large engineering team, a controls engineer, and a team leader, focusing on enhancing planned maintenance, production, and all site engineering activities. Day-... ",
+   "applications": 11,
+   "jobUrl": "https://www.reed.co.uk/jobs/engineering-manager/57300205"
+  }
+ ],
+ "totalResults": 2
+}
