@@ -105,3 +105,23 @@ def test_a_role_with_no_advert_still_shows_the_note_on_the_dashboard():
     page = interactive.render(con)
     assert f'class="note">{LISTING}' in page, \
         "a genuinely listing-only role has to say so where the buttons are"
+
+
+def _status(con, uid):
+    return con.execute("SELECT status, note FROM role_state WHERE uid=?",
+                       (uid,)).fetchone()
+
+
+def test_a_role_closed_once_its_text_arrives_says_why():
+    """Found 17 Sept 2026: two roles closed with no reason in the note."""
+    con = store.connect(":memory:")
+    _role(con, "deal", [LISTING],
+          description=DESC + " There is a take-home exercise.")
+    _role(con, "floor", [LISTING])
+    con.execute("UPDATE roles SET salary_min=60000, salary_max=75000, "
+                "salary_currency='GBP', salary_period='year', "
+                "salary_confirmed=1 WHERE uid='floor'")
+    assert cli._rescreen(con, _cfg()) == 2
+    deal, floor = _status(con, "deal"), _status(con, "floor")
+    assert deal["status"] == "closed" and "coding round" in deal["note"], deal["note"]
+    assert floor["status"] == "closed" and "floor" in floor["note"], floor["note"]

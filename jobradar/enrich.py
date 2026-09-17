@@ -85,19 +85,40 @@ def _text(page: str) -> str:
     return "\n".join(x for x in lines if x).strip()
 
 
-def fetch(url: str, session=None, timeout: int = 20) -> str:
+def fetch(url: str, session=None, timeout: int = 20) -> "Details":
+    """One LinkedIn posting's advert, or a `Details` recording why not.
+
+    Used to return a bare `""` on every failure: a network error, a non-200,
+    and a 200 whose page did not match `_BLOCK` all looked identical, so a
+    scan that failed to fetch 24 of 88 postings printed no reason for any of
+    them (`cmd_scan`'s "fetching N postings that arrived as headlines only"
+    line, 17 Sept 2026). Checked by hand the same day: two of the stuck ids
+    answered HTTP 200 with 34KB and 75KB bodies, so the postings were live and
+    the failure was something this function threw away, not a dead listing.
+
+    A 200 that parses to nothing is reported too, not folded into the network
+    failures: it is either a removed listing (LinkedIn serves those as a
+    normal 200) or `_BLOCK` no longer matching the page LinkedIn sends, and
+    only the second one is this module's bug to fix. Silence made the two
+    indistinguishable.
+    """
     jid = job_id(url)
     if not jid:
-        return ""
+        return Details.make(error="no LinkedIn job id in the URL")
     get = (session or requests).get
     try:
         r = get(JOB_URL.format(job_id=jid), headers={"User-Agent": UA},
                 timeout=timeout)
-    except requests.RequestException:
-        return ""
+    except requests.RequestException as e:
+        return Details.make(error=f"request failed: {type(e).__name__}")
     if r.status_code != 200:
-        return ""
-    return _text(r.text)
+        return Details.make(error=f"HTTP {r.status_code}")
+    text = _text(r.text)
+    if not text:
+        return Details.make(
+            error="HTTP 200 but no description block on the page "
+                  "(removed listing, or the page shape has changed)")
+    return Details.make(text)
 
 
 # Workday and SmartRecruiters both omit the description from their list
@@ -894,16 +915,29 @@ def run(con, cfg=None, rows=None, pause: float = 1.0, on_each=None,
     flagged. A refused API key is different in kind, because it fails every
     Reed role at once for a reason the reader can fix, and a count of
     "filled in 0 of 21" does not say that.
+
+    A failure this run does not stop the role being tried again: `candidates`
+    re-selects on description length alone, with no "already attempted"
+    marker, so anything that failed here is offered again on the very next
+    scan or `enrich`. What used to be silent is the STORED FLAG: a role whose
+    fetch just failed kept whatever "no description available"/"not
+    screened" wording the scan wrote against its empty description, which
+    reads as "this source has none" when the truth is "this run could not
+    read it". `_mark_could_not_fetch` corrects that label in place, for
+    every platform a fetcher exists for, not only Reed.
     """
     rows = candidates(con) if rows is None else rows
     keys = {"reed": getattr(cfg, "reed_api_key", "") or ""} if cfg else {}
     got = 0
-    failed: dict[str, int] = {}
+    failed: dict[tuple[str, str], int] = {}
     for i, r, text in _texts(rows, pause, concurrency, keys):
         err = getattr(text, "error", "")
-        if err and (r["platform"] or "") == "reed":
-            failed[err] = failed.get(err, 0) + 1
-        if text and len(text) >= MIN_DESC and len(text) > _stored_len(r):
+        success = bool(text) and len(text) >= MIN_DESC and len(text) > _stored_len(r)
+        if err and not success:
+            platform = (r["platform"] or "") or "unknown platform"
+            failed[(platform, err)] = failed.get((platform, err), 0) + 1
+            _mark_could_not_fetch(con, r, err)
+        if success:
             got += 1
             fields = {"description": text[:20000]}
             stated = getattr(text, "salary", None)
@@ -939,9 +973,60 @@ def run(con, cfg=None, rows=None, pause: float = 1.0, on_each=None,
         if on_each:
             on_each(i, len(rows), got)
     if notes is not None:
-        for err, n in sorted(failed.items(), key=lambda kv: -kv[1]):
-            notes.append(f"{n} Reed role(s) kept their search extract: {err}")
+        for (platform, err), n in sorted(failed.items(), key=lambda kv: -kv[1]):
+            if platform == "reed":
+                # Reed's search endpoint always leaves a usable extract
+                # behind, so a failed details fetch is not "no description",
+                # it is "still the short one". Said differently from the
+                # other platforms on purpose: those have nothing at all until
+                # a fetch succeeds.
+                notes.append(f"{n} Reed role(s) kept their search extract: {err}")
+            else:
+                notes.append(f"{n} {platform} role(s) could not be fetched: {err}")
     return got, len(rows)
+
+
+def _mark_could_not_fetch(con, row, err: str) -> None:
+    """Replace a stale "no description" flag with what actually happened.
+
+    `parse_linkedin` writes "listing-only: no description available from
+    this source" against every card, and `screen.screen` writes "not
+    screened: no description from this source" whenever the text it was
+    handed was empty. Both are true statements about the SEARCH result, which
+    genuinely carries no advert, and both are wrong statements about the
+    ROLE once a fetch has been tried and failed: the source has a
+    description, this run just could not read it. Left alone, that wording
+    survives forever, because a role that never clears MIN_DESC is never
+    selected by `cli._rescreen` (its query requires >=200 characters) and so
+    never gets recomputed against the truth.
+
+    Deliberately conservative: only replaces a flag this codebase already
+    recognises as "about missing text" (`cli._about_missing_text`), and only
+    while the stored description is still too short to have been screened.
+    A role whose OTHER fetcher in the chain came back with real text, or that
+    was already long enough to be screened for some other reason, is left
+    exactly as it is.
+    """
+    import json as _json
+
+    from .cli import _about_missing_text
+
+    cur = con.execute("SELECT flags, description FROM roles WHERE uid=?",
+                      (row["uid"],)).fetchone()
+    if cur is None:
+        return
+    if len((cur["description"] or "").strip()) >= MIN_DESC:
+        return
+    try:
+        flags = _json.loads(cur["flags"] or "[]")
+    except ValueError:
+        flags = []
+    if not any(_about_missing_text(f) for f in flags):
+        return
+    flags = [f for f in flags if not _about_missing_text(f)]
+    flags.append(f"could not fetch a description this run: {err}")
+    con.execute("UPDATE roles SET flags=? WHERE uid=?",
+                (_json.dumps(flags), row["uid"]))
 
 
 def _employment(row, stated: str, text: str) -> str:

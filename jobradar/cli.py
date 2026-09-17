@@ -1231,10 +1231,18 @@ def _enrich_step(con, cfg) -> None:
 
 
 def _about_missing_text(flag: str) -> bool:
-    """A flag that only means the advert text was absent or thin."""
+    """A flag that only means the advert text was absent or thin.
+
+    "could not fetch" is `enrich._mark_could_not_fetch`'s own wording, added
+    here for the same reason the other three are: once real text is stored,
+    `_rescreen` has to be able to recognise and drop it rather than leaving a
+    stale "we failed to read this" note sitting next to the advert it went on
+    to read successfully on a later run.
+    """
     f = flag.lower()
     return ("not screened" in f or "barely screened" in f
-            or "listing-only" in f or "listing only" in f)
+            or "listing-only" in f or "listing only" in f
+            or "could not fetch" in f)
 
 
 def _rescreen(con, cfg) -> int:
@@ -1267,27 +1275,38 @@ def _rescreen(con, cfg) -> int:
                                 period=r["salary_period"] or "year",
                                 confirmed=bool(r["salary_confirmed"]),
                                 raw=r["salary_label"]))
-        keep, _hits = screen_mod.screen(job, cfg)
+        keep, hits = screen_mod.screen(job, cfg)
+        why = ("dealbreaker: " + ", ".join(hits)) if hits else "failed screening"
         if keep:
-            keep, _why = screen_mod.apply_salary(job, cfg)
-        if not keep:
-            # Settle it rather than delete it: a role you were shown and then
-            # told was wrong is worth being able to look back at, and deleting
-            # it would make it "new" again on the next scan.
-            store.set_status(con, r["uid"], "closed",
-                             "hidden after its full description was read")
-            dropped += 1
-            continue
+            keep, why = screen_mod.apply_salary(job, cfg)
         # The old flags were written against an empty description and now
         # claim things that are no longer true. All three wordings, not just
         # "not screened": the LinkedIn adapter writes "listing-only: no
         # description available", and a short first read writes "barely
-        # screened", and both survived on roles screened against the full text.
+        # screened", and both survived on roles screened against the full
+        # text. Done BEFORE the keep/reject branch below, not only in it: a
+        # role that fails a dealbreaker or the floor once its text arrives
+        # used to keep its stale "no description from this source" label
+        # forever, because the old code `continue`d past this straight to
+        # the next row.
         flags = [f for f in _json.loads(r["flags"] or "[]")
                  if not _about_missing_text(f)]
         flags += [f for f in job.flags if f not in flags]
         con.execute("UPDATE roles SET flags=? WHERE uid=?",
                     (_json.dumps(flags), r["uid"]))
+        if not keep:
+            # Settle it rather than delete it: a role you were shown and then
+            # told was wrong is worth being able to look back at, and deleting
+            # it would make it "new" again on the next scan.
+            # The reason goes in the note. It is not in `job.flags`: a hard
+            # dealbreaker comes back as `hits` and the floor as `why`, so a
+            # note without them read as closed for no stated reason. Found on
+            # 17 Sept 2026 on two LinkedIn roles, one under the floor and one
+            # a pre-sales role, both saying only "hidden after its full
+            # description was read".
+            store.set_status(con, r["uid"], "closed",
+                             f"hidden after its full description was read ({why})")
+            dropped += 1
     return dropped
 
 
