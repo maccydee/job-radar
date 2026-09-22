@@ -142,9 +142,26 @@ def _scan_item(con) -> Item:
 
 
 def _sources_item() -> Item:
+    """The age of the list a scan would actually read, and which file that is.
+
+    Two of them can exist: the one that shipped with this copy, and the one
+    `scan` downloads when that goes stale. Naming which is in force matters
+    here more than anywhere, because this is the command somebody runs when
+    the numbers do not add up, and "17,810 boards, checked three weeks ago"
+    against two different files on disk is exactly the sort of half-answer
+    this module exists to stop giving.
+
+    The fix is no longer `git pull --ff-only`. `scan` fetches the current list
+    itself now, so telling a reader to pull would be telling them to do by
+    hand something the next run does on its own, and it would be wrong
+    outright for the pip installs and tarballs that have no git at all.
+    """
     from . import sources as src_mod
-    return Item("sources", "Source list checked", src_mod.age_days(), "",
-                "git pull --ff-only")
+    active = src_mod.active_file()
+    detail = ("" if active == src_mod.BUNDLED
+              else f"reading the copy this install downloaded, at {active}")
+    return Item("sources", "Source list checked", src_mod.age_days(), detail,
+                "job-radar scan, which fetches the current list first")
 
 
 def _seed_item(path=None) -> Item:

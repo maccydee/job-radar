@@ -334,23 +334,76 @@ A weekly job in this repository revalidates every board on Sunday mornings and
 opens a pull request pruning anything dead. Growing the list is a separate job
 that does not live here: the crawl-index harvest that found most of these
 17,810 boards runs in a private maintainer repository, so that forking this
-does not set a crawler loose. **Neither of them reaches your copy.**
+does not set a crawler loose.
 
-- **Cloned it?** Your source list is frozen at the day you cloned.
-  `git pull` brings the merged updates down.
-- **Forked it?** Your fork runs its own validation, so it prunes dead boards
-  for you. It never gains new ones: the crawler that finds employers lives in
-  a separate private repository on purpose, so that forking this does not set
-  a crawler loose. Pull from upstream for those.
+Neither of those reaches your copy on its own, and for a long time nothing
+here closed that gap. `scan` printed a note at the end of every run saying the
+list was old and that `git pull` would fix it. That is the tool asking its
+reader to do the tool's job, and on 22 September 2026 it had been asking for
+nine days while the maintainer's own scans quietly missed roles. A note is not
+a fix.
+
+### The scan fetches it
+
+`job-radar scan` now gets the current published list before it reads a single
+board. The rules, in full:
+
+- **Only when it is stale.** The same eight-day threshold everything else
+  here uses, which is the weekly revalidation plus one missed cycle. A list
+  checked three days ago is not fetched and nothing is printed.
+- **One request, to one host, at most once a day.** It is a conditional
+  request carrying the ETag of the copy you hold, so an unchanged list costs a
+  304 and no body at all. A refusal is an answer: the status code is reported
+  and nothing is retried until tomorrow.
+- **It never writes `sources/sources.json`.** That file is tracked, so writing
+  it would leave every clone with a dirty tree and a `git pull` that refuses
+  to merge, and it would make it possible to overwrite your own edits. There
+  is no code path in the tool that opens it for writing except
+  `validate --prune`, which you run on purpose.
+- **The download lands in `state/sources-upstream.json`**, beside your
+  seen-set, where `--state` moves it with everything else a run remembers.
+  `state/` is gitignored and the Actions scan job force-adds only
+  `state/seen.json`, so it cannot reach a commit.
+- **A scan reads whichever of the two was `checked` more recently.** One rule,
+  and it covers every case: a later `git pull` beats last month's download
+  with nobody clearing a cache, a local `validate --prune` stamps `checked`
+  with today so your own prune keeps winning until upstream publishes
+  something newer, and a download somehow older than the shipped list is
+  simply not used.
+- **A local edit stands the update down.** In a git checkout the tool asks git
+  whether `sources/sources.json` is modified, read-only and once. If it is,
+  nothing is fetched and the run says so, because an edit that survives on
+  disk and is then quietly ignored is the same loss by a longer route. No git,
+  as in a pip install, means that question cannot be answered, and the update
+  proceeds: it is not writing that file either way.
+- **A bad download is refused, not installed.** It must parse, carry a
+  `checked` date that is a date and is not older than yours, and hold at least
+  80% of the sources you already have. That last one is the gate
+  `tools/refresh_seed.py` uses, pointed the other way: a short list is not
+  visibly broken, it is a list with fewer employers on it, and the employers
+  that fell off look exactly like employers that do not exist.
+
+Every outcome prints. No failure claims the list is current, and where the
+tool cannot tell, it says that rather than implying it is fine.
+
+### Turning it off
 
 ```bash
-git pull                                  # a clone
-git pull https://github.com/maccydee/job-radar main   # a fork
+job-radar scan --no-source-update        # this run only
 ```
 
-`job-radar scan` says so itself once the list is more than a month old, and
-`sources/sources.json` carries the date it was last checked in its `meta`
-block if you want to see for yourself.
+```yaml
+sources:
+  auto_update: false                     # for good
+```
+
+A run with updates off still says, at the end, how old the list it read was
+and which switch is holding the update back. `--dry-run` also skips it, and
+says so, because a dry run is documented as writing nothing.
+
+`job-radar doctor` reports the age at any time, and names which of the two
+files is in force. `sources/sources.json` carries the date it was last checked
+in its `meta` block if you want to see for yourself.
 
 ## Reed and Adzuna, against their robots.txt and their terms
 

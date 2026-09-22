@@ -10,9 +10,60 @@ from . import adapters
 from .config import Config
 from .models import Source
 from .screen import country_name
-from .state import atomic_write_text
+from .state import DEFAULT_DIR, atomic_write_text
 
+# The list that shipped with this copy of the tool. Tracked in a git checkout,
+# part of the package in a pip install, and never written by anything here
+# except `validate --prune`, which a person runs on purpose.
 BUNDLED = Path(__file__).parent.parent / "sources" / "sources.json"
+
+# The list `scan` downloads when the bundled one has gone stale. See
+# `jobradar/source_update.py` for why it lands here rather than over the top
+# of BUNDLED: that file is tracked, so writing it would leave every user with
+# a dirty tree and a `git pull` that refuses to merge, and it would make it
+# possible to overwrite somebody's own edits. `state/` is gitignored, the scan
+# workflow force-adds only `state/seen.json`, and site-packages is not written
+# either way.
+UPDATED_NAME = "sources-upstream.json"
+
+
+def updated_file(state_dir=None) -> Path:
+    """Where a downloaded list is kept. Beside the seen-set, as `--state` says."""
+    return Path(state_dir or DEFAULT_DIR) / UPDATED_NAME
+
+
+def _checked_on(path: Path) -> str:
+    """The `meta.checked` date on a list, as a sortable string, or ""."""
+    try:
+        meta = json.loads(path.read_text(encoding="utf-8")).get("meta", {})
+    except (OSError, ValueError, AttributeError):
+        return ""
+    if not isinstance(meta, dict):
+        return ""
+    return str(meta.get("checked") or meta.get("validated") or "")[:10]
+
+
+def active_file(state_dir=None, bundled=None) -> Path:
+    """Which of the two lists a scan should actually read.
+
+    Whichever was checked more recently, and BUNDLED on a tie or when neither
+    says. That one rule covers every case that would otherwise need its own:
+    a `git pull` bringing a newer list beats a download from last month
+    without anybody clearing a cache, a `validate --prune` stamps `checked`
+    with today so a maintainer's own prune keeps winning until upstream
+    publishes something newer, and a downloaded copy that is somehow older
+    than the shipped one is simply not used.
+
+    Comparing the dates rather than the file mtimes is deliberate. An mtime
+    says when the bytes were written here, which for a fresh clone is the day
+    of the clone whatever the list inside it is, and that is precisely the
+    confusion this whole feature exists to remove.
+    """
+    base = Path(bundled) if bundled else BUNDLED
+    other = updated_file(state_dir)
+    if not other.is_file():
+        return base
+    return other if _checked_on(other) > _checked_on(base) else base
 
 
 def load_file(path: str | Path) -> list[Source]:
@@ -272,10 +323,15 @@ def in_phases(srcs: list[Source]) -> list[tuple[int, str, list[Source]]]:
     return out
 
 
-def load(cfg: Config, problems: list | None = None) -> list[Source]:
+def load(cfg: Config, problems: list | None = None,
+         state_dir=None) -> list[Source]:
     srcs: list[Source] = []
     if cfg.use_bundled_sources:
-        srcs.extend(load_file(BUNDLED))
+        # `active_file`, not BUNDLED. A scan that has just downloaded a newer
+        # list and then read the shipped one anyway would be the update
+        # reporting success and changing nothing, which is this repository's
+        # signature failure wearing a new hat.
+        srcs.extend(load_file(active_file(state_dir)))
     for d in cfg.extra_sources:
         if isinstance(d, str):
             d = {"company": d, "url": d}
@@ -364,7 +420,7 @@ def save(sources: list[Source], path: str | Path, meta: dict | None = None) -> N
     atomic_write_text(p, json.dumps(body, indent=1, ensure_ascii=False))
 
 
-def age_days(path=None) -> int | None:
+def age_days(path=None, state_dir=None) -> int | None:
     """How long since the bundled list was last checked against reality.
 
     The list is data and it rots: boards migrate between applicant tracking
@@ -379,8 +435,13 @@ def age_days(path=None) -> int | None:
     a pull, and someone has to be told that.
     """
     from datetime import date
+    # The list that will actually be READ, which after an update is the
+    # downloaded one. Ageing the shipped file while scanning the downloaded
+    # one would put a stale warning on a current list and a fresh-looking date
+    # on whatever the scan really used.
     try:
-        meta = json.loads(Path(path or BUNDLED).read_text(encoding="utf-8")).get("meta", {})
+        meta = json.loads(Path(path or active_file(state_dir))
+                          .read_text(encoding="utf-8")).get("meta", {})
     except (OSError, ValueError, AttributeError):
         return None
     stamp = meta.get("checked") or meta.get("validated")

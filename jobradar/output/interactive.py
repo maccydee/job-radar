@@ -1217,9 +1217,13 @@ def render(con, home_currency: str = "") -> str:
                                          else f"{age} days ago")
         # Upstream validates weekly, so eight days is one missed cycle.
         cls = "sync warn" if age > 8 else "sync"
-        tip = ("Run `git pull` to get boards that have moved and employers "
-               "added since." if age > 8 else "Up to date with the weekly "
-               "upstream check.")
+        # Not "run `git pull`" any more: the next `job-radar scan` fetches
+        # the current list itself. The button stays, because a person
+        # clicking a thing labelled Pull is asking for exactly that, code
+        # included, which is more than a scan does on its own.
+        tip = ("The next `job-radar scan` fetches the current list. Pull to "
+               "update this checkout now, code included."
+               if age > 8 else "Up to date with the weekly upstream check.")
         _sync = (f'<span class="{cls}" title="{_h.escape(tip, quote=True)}">'
                  f'sources synced {when}</span>'
                  + ('<button id="pull" type="button" title="git pull --ff-only '

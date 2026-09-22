@@ -77,6 +77,20 @@ sectors: []
 
 sources:
   use_bundled: true
+
+  # Fetch the current published source list before a scan reads anything.
+  #
+  # On by default, and the default is the point. The list rots, the weekly
+  # revalidation runs upstream and reaches nobody's copy, and the tool used to
+  # respond by printing a note telling you to run `git pull`. One conditional
+  # request to one host, only when the copy here is more than eight days old,
+  # at most once a day. It never writes `sources/sources.json`: the download
+  # lands in `state/sources-upstream.json` and a scan reads whichever of the
+  # two was checked more recently. A download that looks wrong is refused and
+  # reported rather than installed. `scan --no-source-update` is the same
+  # switch for a single run. See docs/SOURCES.md.
+  auto_update: true
+
   # Limit the bundled list by country. Empty means all.
   countries: []
 

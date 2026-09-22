@@ -560,6 +560,11 @@ def first_scan(config_path: Path) -> int:
         # test_three_silent_faults.py compares the two lists so the next flag
         # added fails there instead of in a stranger's first run.
         no_enrich = False
+        # False, so a first scan fetches the current source list before it
+        # reads anything. A fresh clone's list is usually current and
+        # nothing happens; a clone taken from a zip six months old is
+        # exactly the run that must not start on a dead list.
+        no_source_update = False
         # False, so the first scan DOES hold the machine awake. It is
         # the longest run this tool ever does and the one most likely
         # to be started and walked away from.

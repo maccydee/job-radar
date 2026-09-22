@@ -216,6 +216,9 @@ def _args(d: Path, cfg: Path):
         docs = None
         dry_run = True
         no_enrich = True
+        # True: this test is not about the source-list update and must not
+        # reach the network to find that out.
+        no_source_update = True
         no_caffeine = True
         resume = False
         no_open = True

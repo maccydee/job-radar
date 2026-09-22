@@ -520,6 +520,9 @@ def test_a_limited_scan_says_so_on_the_first_run_too():
         docs = None
         dry_run = False
         no_enrich = True
+        # True: this test is not about the source-list update and must not
+        # reach the network to find that out.
+        no_source_update = True
         no_caffeine = True
         resume = False
         no_open = True

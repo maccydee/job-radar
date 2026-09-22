@@ -75,6 +75,17 @@ class Config:
     sectors: list[str] = field(default_factory=list)
     source_countries: list[str] = field(default_factory=list)
     use_bundled_sources: bool = True
+    # Whether `scan` fetches the current published source list before it
+    # reads anything, when the copy here has gone stale.
+    #
+    # On by default, and the default is the whole point: the list rots, the
+    # weekly revalidation runs upstream and reaches nobody's copy, and the
+    # tool used to respond by printing a note telling its user to run
+    # `git pull`. A default of false would put that note back and leave the
+    # remembering to a person, which is what was already failing. Off is for
+    # somebody who curates their own list or runs with no outbound network,
+    # and `scan --no-source-update` is the same switch for one run.
+    auto_update_sources: bool = True
     extra_sources: list[dict] = field(default_factory=list)
     # Reed's jobseeker API is the one source here that needs a credential.
     # Empty means the Reed source is skipped with a message rather than
@@ -355,8 +366,8 @@ KNOWN_KEYS = {
                   "need_sponsorship"},
     "salary": {"floor", "currency"},
     "cv": {"path"},
-    "sources": {"use_bundled", "countries", "extra", "reed_api_key",
-                "adzuna_app_id", "adzuna_app_key"},
+    "sources": {"use_bundled", "auto_update", "countries", "extra",
+                "reed_api_key", "adzuna_app_id", "adzuna_app_key"},
     "output": {"formats", "dir"},
     "fetch": {"concurrency", "timeout", "retries", "user_agent"},
 }
@@ -566,10 +577,14 @@ def _bundled_sector_tags() -> set[str] | None:
     is its own failure and refusing every sector on the back of it would be a
     second, wronger one.
     """
-    from .sources import BUNDLED
+    # The list that will actually load, which after `scan` has updated it is
+    # the downloaded one. Reading the shipped file here would refuse a sector
+    # tag that exists in the list the scan is about to read, which is a
+    # config error invented by the config validator.
+    from .sources import active_file
     import json as _json
     try:
-        raw = _json.loads(BUNDLED.read_text(encoding="utf-8"))
+        raw = _json.loads(active_file().read_text(encoding="utf-8"))
         items = raw.get("sources", raw) if isinstance(raw, dict) else raw
         known = {(d.get("sector") or "").lower() for d in items if isinstance(d, dict)}
         known.discard("")
@@ -865,6 +880,8 @@ def load(path: str | os.PathLike | None = None) -> Config:
         sectors=_sectors(_as_list(raw.get("sectors"))),
         source_countries=_countries(_as_list(src.get("countries")), "sources.countries"),
         use_bundled_sources=_bool(src.get("use_bundled", True), "sources.use_bundled"),
+        auto_update_sources=_bool(src.get("auto_update", True),
+                                  "sources.auto_update"),
         extra_sources=_extra_sources(src.get("extra"), "sources.extra"),
         reed_api_key=_api_key(src.get("reed_api_key"), "REED_API_KEY"),
         adzuna_app_id=_api_key(src.get("adzuna_app_id"), "ADZUNA_APP_ID"),

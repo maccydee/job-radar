@@ -1635,7 +1635,10 @@ def test_the_sync_nudge_fires_once_a_day_not_every_command():
     with patch.object(sources, "age_days", return_value=23), \
          patch.object(cli, "_say", said.append):
         cli._daily_sync_nudge(cfg, ":memory:")
-    assert len(said) == 1 and "git pull" in said[0]
+    # `job-radar scan`, not `git pull`. The scan fetches the current list
+    # itself now, and pointing a pip install at a git command it does not
+    # have was the old advice. See tests/test_source_update.py.
+    assert len(said) == 1 and "job-radar scan" in said[0]
 
     # Fresh list: silent.
     said.clear()

@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 import yaml
 
 from . import adapters, output, progress as progress_mod, sources as src_mod
+from . import source_update
 import webbrowser
 
 from . import serve as serve_mod
@@ -34,7 +35,7 @@ def _say(msg: str = "") -> None:
     print(msg, flush=True)
 
 
-def _load_sources(cfg: Config) -> list[Source]:
+def _load_sources(cfg: Config, state_dir=None) -> list[Source]:
     """The configured sources, saying out loud which ones were unusable.
 
     A templated URL asking for a placeholder this tool cannot supply used to
@@ -43,7 +44,7 @@ def _load_sources(cfg: Config) -> list[Source]:
     something silently is the other half of that bug, so it is named here.
     """
     problems: list = []
-    srcs = src_mod.load(cfg, problems=problems)
+    srcs = src_mod.load(cfg, problems=problems, state_dir=state_dir)
     for company, why in problems[:10]:
         _say(f"  ! skipped {company}: {why}")
     if len(problems) > 10:
@@ -249,7 +250,35 @@ def cmd_scan(args) -> int:
         if why:
             _say(why)
             return 1
-    srcs = _load_sources(cfg)
+    # Make the list current BEFORE a single board is read, rather than
+    # printing a note at the end telling the reader to go and do it.
+    #
+    # Above `_load_sources`, because an update that lands after the list has
+    # been read is an update that changes nothing about this run while
+    # reporting that it worked, and that is the failure this repository keeps
+    # producing. `state_dir` is the folder the seen-set lives in, the same
+    # convention `blocks_path` uses, so `--state` isolates the downloaded copy
+    # along with everything else a run remembers.
+    state_dir = Path(args.state).parent if args.state else None
+    off = ""
+    if args.no_source_update:
+        off = "--no-source-update"
+    elif not cfg.auto_update_sources:
+        off = "sources.auto_update: false in your config"
+    elif args.dry_run:
+        # A dry run is documented as touching no file it was not pointed at,
+        # and the downloaded list is a file. Saying so is the point: silently
+        # skipping it would make a dry run's source list differ from the real
+        # run's with nothing on screen to explain the difference.
+        off = "this is a dry run, which writes nothing"
+    # Not called `fresh`. That name is rebound to a slice of `all_jobs`
+    # further down this same function, so the note at the end would have been
+    # handed a list of postings and died on `.current`.
+    list_update = source_update.update(cfg, off_because=off,
+                                       state_dir=state_dir)
+    if list_update.message:
+        _say(list_update.message)
+    srcs = _load_sources(cfg, state_dir)
     # Whether the limit actually cut anything, rather than merely whether one
     # was asked for. `--limit 20000` against a 13,440-source config read every
     # one of them and still announced "only 20000 sources were read".
@@ -895,7 +924,7 @@ def cmd_scan(args) -> int:
 
     if kept:
         _coverage_note(kept, srcs, cfg)
-    _staleness_note(cfg)
+    _staleness_note(cfg, list_update)
 
     # A scan that could not read anything is not a scan that found nothing,
     # and until this existed the two were the same run from the outside: exit
@@ -1310,29 +1339,47 @@ def _rescreen(con, cfg) -> int:
     return dropped
 
 
-def _staleness_note(cfg) -> None:
-    """Tell people their copy of the source list ages, and how to refresh it.
+def _staleness_note(cfg, fresh=None) -> None:
+    """Say, at the end, whether this scan read a current list or an old one.
 
-    Nothing said this anywhere. The weekly validation and growth jobs run
-    upstream and open pull requests there; a clone freezes its list on the day
-    it was cloned, and a fork only prunes its own, because the crawler that
-    finds new employers deliberately does not ship in this repository. So a
-    six-month-old checkout quietly loses boards as they migrate and never
-    gains the ones that were added, while looking exactly as healthy as a
-    fresh one.
+    The weekly validation and growth jobs run upstream and open pull requests
+    there; a clone freezes its list on the day it was cloned, and a fork only
+    prunes its own, because the crawler that finds new employers deliberately
+    does not ship in this repository. So an old checkout quietly loses boards
+    as they migrate and never gains the ones that were added, while looking
+    exactly as healthy as a fresh one.
+
+    This used to end with "`git pull` gets you boards that have moved", which
+    is the tool asking its reader to do the tool's job, and on 22 September
+    2026 it had been asking for nine days while the scan went on missing
+    roles. `scan` fetches the list itself now, so the only thing left to say
+    here is what happened when it tried, and this is deliberately silent when
+    the update worked: a line saying "your list is old" underneath a line
+    saying "your list was just updated" is the tool disagreeing with itself.
+
+    `fresh` is the `source_update.Result` from the top of the run. It is
+    optional so that every other caller and every test that predates it still
+    works, and a missing one is treated as "nothing is known about the
+    update", never as "it succeeded".
     """
     if not cfg.use_bundled_sources:
         return
+    if fresh is not None and fresh.current:
+        return                    # the run already said it is the current one
     days = src_mod.age_days()
-    if days is None:
-        return
-    if days < STALE_AFTER_DAYS:
+    if days is None or days < STALE_AFTER_DAYS:
         return
     _say("")
-    _say(f"  Your source list was last checked {days} days ago, and upstream "
-         f"checks it weekly.")
-    _say(f"  `git pull` gets you boards that have moved since and employers "
-         f"added since. Without it this scan is quietly missing roles.")
+    _say(f"  This scan read a source list last checked {days} days ago, and "
+         f"upstream checks it weekly.")
+    if fresh is None or fresh.state in ("off", "not-bundled"):
+        _say(f"  Automatic updates are off for this run, so boards that have "
+             f"moved since were read at their old addresses. Drop "
+             f"`--no-source-update`, or set `sources.auto_update: true`, and "
+             f"the next scan fetches the current list.")
+    else:
+        _say(f"  Fetching the current one did not work this run, so it is "
+             f"quietly missing roles. The next scan tries again.")
 
 
 def _daily_sync_nudge(cfg, db=None) -> None:
@@ -1360,8 +1407,8 @@ def _daily_sync_nudge(cfg, db=None) -> None:
     # who has never scanned, and that is the right way round.
     if not Path(db or store.DEFAULT_PATH).is_file():
         _say(f"Your source list was last checked {days} days ago; upstream "
-             f"checks it weekly. Run `git pull` to pick up boards that have "
-             f"moved and employers added since.\n")
+             f"checks it weekly. The next `job-radar scan` fetches the "
+             f"current one before it reads anything.\n")
         return
     con = store.connect(db, must_exist=True)
     try:
@@ -1371,9 +1418,13 @@ def _daily_sync_nudge(cfg, db=None) -> None:
         store.set_meta(con, "sync_nudge", today)
     finally:
         con.close()
+    # Not "run `git pull`" any more. `scan` fetches the list itself, and a
+    # nudge that hands the job back to the reader is the thing that was
+    # already failing: this one had been telling the maintainer to pull for
+    # nine days while his own scans missed roles.
     _say(f"Your source list was last checked {days} days ago; upstream checks "
-         f"it weekly. Run `git pull` to pick up boards that have moved and "
-         f"employers added since.\n")
+         f"it weekly. The next `job-radar scan` fetches the current one "
+         f"before it reads anything.\n")
 
 
 # Keyword searches return leads, not postings: no description, no salary, and
@@ -2845,6 +2896,15 @@ def build_parser() -> argparse.ArgumentParser:
                         "It is the head of the list, not a sample of it, so "
                         "a small N reads one platform's boards and can "
                         "match nothing. 0 reads all of them.")
+    s.add_argument("--no-source-update", action="store_true",
+                   help="do not fetch the current published source list "
+                        "first. It is fetched by default, once, and only when "
+                        "the copy here is more than a week old, because the "
+                        "weekly revalidation runs upstream and reaches nobody "
+                        "otherwise. With this the scan runs on the list it "
+                        "has and says how old that is. "
+                        "`sources.auto_update: false` is the permanent "
+                        "version.")
     s.add_argument("--no-enrich", action="store_true",
                    help="skip fetching full postings for headline-only "
                         "sources; they stay unscreenable")

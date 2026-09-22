@@ -742,8 +742,31 @@ systems, tokens get renamed, companies get acquired. One revalidation pass
 found 23 dead boards, and 19 of those had simply moved and were hiding 762
 live roles the scan could no longer see. A weekly job in this repository
 revalidates every board on Sunday mornings and opens a pull request pruning
-anything dead, so `git pull` is what keeps a clone current. Growing the list
-is a separate job that does not live here.
+anything dead. Growing the list is a separate job that does not live here.
+
+**`job-radar scan` fetches the current list itself**, before it reads a single
+board, and only when the copy here is more than a week old. That is one
+request, to one host, at most once a day. You do not have to remember
+anything, and there is nothing to pull.
+
+It never writes over `sources/sources.json`. That file is tracked, so writing
+it would leave you with a permanently dirty checkout and a `git pull` that
+refuses to merge, and it would make it possible to destroy your own edits. The
+downloaded copy goes next to your seen-set, in `state/`, and a scan reads
+whichever of the two was **checked** more recently. So a later `git pull` wins
+on its own, and if you have edited the tracked list the update stands aside
+and says so.
+
+Every outcome is printed, including the ones where nothing happened, and no
+outcome claims the list is current unless the server actually said so. If the
+download is refused, unreadable, or shorter than 80% of the list you already
+have, it is thrown away and the scan runs on what it has and tells you how old
+that is. `job-radar doctor` says the same thing at any time, and names which
+of the two files is in force.
+
+Switch it off with `scan --no-source-update` for one run, or
+`sources.auto_update: false` in your config for good. The scan then says, at
+the end, that it read a list of a stated age and that updates are off.
 
 [docs/SOURCES.md](docs/SOURCES.md) is the full account: why employer boards
 rather than aggregators, the two aggregators that are in and how to key them,
