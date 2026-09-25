@@ -7136,3 +7136,29 @@ if __name__ == "__main__":
             traceback.print_exc()
     print(f"\n{len(fns) - bad}/{len(fns)} passed")
     sys.exit(1 if bad else 0)
+
+
+def test_a_cross_employer_feed_is_not_checked_against_one_company_name():
+    """`validate` reads the company name a board publishes and compares it to
+    the name we hold. Workable's `?day_range=7` sweep and its keyword search
+    serve every employer on the platform from one URL, so that name is just
+    whoever posted most recently: on 25 Sept the run reported the recent-postings
+    sweep as 'Chapter5' and called it a MISMATCH. LinkedIn was already excused
+    by name; the others were not, so the same false line printed every run and
+    trained the reader to skim past the check that is there to catch a board
+    being swapped underneath us."""
+    from jobradar.discover import verify_identity
+    from jobradar.models import Job
+
+    for platform in ("workable_recent", "workable_search", "nhs", "linkedin"):
+        jobs = [Job(company="Chapter5", title="Engineer",
+                    url="https://jobs.workable.com/view/1", platform=platform)]
+        verdict, note = verify_identity(jobs, None, "Workable, posted recently",
+                                        platform)
+        assert verdict == "unchecked", f"{platform}: {verdict} {note}"
+
+    # An employer's own board is still checked, or the guard would excuse
+    # everything: a real Breezy board naming a different company is a mismatch.
+    jobs = [Job(company="Something Else", title="Engineer",
+                url="https://onedome.breezy.hr/p/1", platform="breezy")]
+    assert verify_identity(jobs, None, "OneDome", "breezy")[0] == "mismatch"

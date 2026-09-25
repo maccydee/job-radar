@@ -712,6 +712,15 @@ def employer_label(host: str | None) -> str:
     return labels[0] if labels else ""
 
 
+# Feeds that serve many employers from one URL. Each is a search endpoint,
+# not an employer's own board: LinkedIn's guest search, NHS Jobs across every
+# trust, and Workable's two cross-company endpoints (`?day_range=7` and the
+# keyword search).
+AGGREGATED_PLATFORMS = frozenset({
+    "linkedin", "nhs", "workable_recent", "workable_search",
+})
+
+
 def verify_identity(jobs: list, domain: str | None, company: str,
                     platform: str = "") -> tuple[str, str]:
     """Does this board actually belong to who we think?
@@ -722,8 +731,13 @@ def verify_identity(jobs: list, domain: str | None, company: str,
     here is how a Florida schools operator gets filed as a payments company.
     """
     # Aggregated search endpoints return many employers by design, so there is
-    # no single identity to check against.
-    if platform == "linkedin":
+    # no single identity to check against. Checking one anyway reports the
+    # first employer the feed happens to return as a MISMATCH: `validate` on
+    # 25 Sept called the Workable recent-postings sweep 'Chapter5', which is
+    # simply whichever company posted most recently. A standing false
+    # MISMATCH is worse than no check, because it teaches you to skim past
+    # the line that is meant to catch a board being swapped under you.
+    if platform in AGGREGATED_PLATFORMS:
         return "unchecked", "aggregated search results, many employers"
 
     if not jobs:
