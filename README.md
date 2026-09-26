@@ -200,7 +200,7 @@ Oracle in the four figures or high hundreds, down to Pinpoint and
 SuccessFactors in the tens. Names you would recognise are on it: Barclays,
 Lloyds, Santander, BP, Shell, Unilever, Tesco, Marks & Spencer, John Lewis,
 Sky, Skyscanner, Accenture, Linklaters, Transport for London, Ofcom and the
-FCA among them. The code carries 32 adapters, five more than the bundled
+FCA among them. The code carries 33 adapters, five more than the bundled
 list uses.
 
 `job-radar coverage` counts the file rather than trusting that paragraph, and

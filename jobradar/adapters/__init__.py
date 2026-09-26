@@ -661,6 +661,26 @@ REGISTRY: list[Platform] = [
              "Token is `tenant|prefix`, prefix optional. Paginates on "
              "`startrow` in twenty-fives, and states no total anywhere",
     ),
+    # Same product as `rmk`, addressed at a custom domain (jobs.bt.com, not a
+    # jobs2web.com one) and served through SuccessFactors' newer
+    # client-rendered "unified" front end, so `rmk`'s HTML scan finds nothing
+    # on it -- there is nothing server-rendered to find. This matches the
+    # JSON endpoint itself, never the search page, which is why it will not
+    # shadow the 93 tenants already on `rmk`: none of their URLs are this
+    # path. No `build`: added and assigned by hand, one tenant so far, not
+    # discoverable from a token the way a Workday or Avature address is.
+    Platform(
+        "rmk_json",
+        r"/services/recruiting/v1/jobs",
+        platforms.parse_rmk_json,
+        method="POST",
+        verified=True,
+        note="SuccessFactors' unified JSON search. Paginates on `pageNumber` "
+             "in tens, and states its own total, `totalJobs` -- but that "
+             "counts the tenant's own duplicate rows, so it is a ceiling and "
+             "a truncation signal, not a target for the deduplicated count "
+             "to reach",
+    ),
     # The pattern is the PATH, not the host, and that is the whole point.
     # Avature runs boards on its own `<tenant>.avature.net` and equally often
     # on the employer's domain, and the second kind is invisible to a

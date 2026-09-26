@@ -1,0 +1,278 @@
+{
+  "jobSearchResult": [
+    {
+      "response": {
+        "jobLocationShort": [
+          "Ipswich, Ipswich, United Kingdom, "
+        ],
+        "supportedLocales": [
+          "en_GB"
+        ],
+        "sfstd_jobLocation_obj": [
+          "GBR Ipswich - A1 Registry"
+        ],
+        "sfstd_marketingBrand_obj": [
+          "BT Group"
+        ],
+        "jobLocationShortWithCoordinates": [
+          {
+            "value": "Ipswich, Ipswich, United Kingdom, ",
+            "key": "52.0587398,1.2789108"
+          }
+        ],
+        "brandUrl": "BTGroup",
+        "unifiedUrlTitle": "Infrastructure-Monitoring-Engineer",
+        "unifiedStandardStart": "01/09/2026",
+        "currency": [
+          "GBP"
+        ],
+        "unifiedStandardTitle": "Infrastructure Monitoring Engineer",
+        "id": "52967",
+        "urlTitle": "Infrastructure-Monitoring-Engineer"
+      }
+    },
+    {
+      "response": {
+        "jobLocationShort": [
+          "Ipswich, Ipswich, United Kingdom, "
+        ],
+        "supportedLocales": [
+          "en_GB"
+        ],
+        "sfstd_jobLocation_obj": [
+          "GBR Ipswich - A1 Registry"
+        ],
+        "sfstd_marketingBrand_obj": [
+          "BT Group"
+        ],
+        "jobLocationShortWithCoordinates": [
+          {
+            "value": "Ipswich, Ipswich, United Kingdom, ",
+            "key": "52.0587398,1.2789108"
+          }
+        ],
+        "brandUrl": "BTGroup",
+        "unifiedUrlTitle": "Infrastructure-Monitoring-Engineer",
+        "unifiedStandardStart": "01/09/2026",
+        "currency": [
+          "GBP"
+        ],
+        "unifiedStandardTitle": "Infrastructure Monitoring Engineer",
+        "id": "52967",
+        "urlTitle": "Infrastructure-Monitoring-Engineer"
+      }
+    },
+    {
+      "response": {
+        "jobLocationShort": [
+          "Euston TE, London, United Kingdom, "
+        ],
+        "supportedLocales": [
+          "en_GB"
+        ],
+        "sfstd_jobLocation_obj": [
+          "GBR London - Euston TE"
+        ],
+        "sfstd_marketingBrand_obj": [
+          "BT"
+        ],
+        "jobLocationShortWithCoordinates": [
+          {
+            "value": "Euston TE, London, United Kingdom, ",
+            "key": "51.5280408,-0.1333271"
+          }
+        ],
+        "brandUrl": "BT",
+        "unifiedUrlTitle": "Infrastructure-Engineering-Specialist-%28Remote-Site-Infra-team%29",
+        "unifiedStandardStart": "12/08/2026",
+        "currency": [
+          "GBP"
+        ],
+        "unifiedStandardTitle": "Infrastructure Engineering Specialist (Remote Site Infra team)",
+        "id": "59203",
+        "urlTitle": "Infrastructure-Engineering-Specialist-%28Remote-Site-Infra-team%29"
+      }
+    },
+    {
+      "response": {
+        "jobLocationShort": [
+          "Cheltenham, Cheltenham TE, United Kingdom, ",
+          "Ipswich, Ipswich Orion Building, United Kingdom, ",
+          "London, One Braham, United Kingdom, ",
+          "Manchester, Manchester Office - Deansgate, United Kingdom, "
+        ],
+        "supportedLocales": [
+          "en_GB"
+        ],
+        "sfstd_jobLocation_obj": [
+          "GBR Cheltenham TE",
+          "GBR Ipswich - Orion Building",
+          "GBR-London-BTHQ One Braham",
+          "GBR-Manchester-Deansgate"
+        ],
+        "sfstd_marketingBrand_obj": [
+          "BT Group"
+        ],
+        "jobLocationShortWithCoordinates": [
+          {
+            "value": "Ipswich, Ipswich Orion Building, United Kingdom, ",
+            "key": "52.0587398,1.2789108"
+          },
+          {
+            "value": "Manchester, Manchester Office - Deansgate, United Kingdom, ",
+            "key": "53.4801113,-2.2481399"
+          },
+          {
+            "value": "Cheltenham, Cheltenham TE, United Kingdom, ",
+            "key": "51.8968433,-2.0755748"
+          },
+          {
+            "value": "London, One Braham, United Kingdom, ",
+            "key": "51.5143378,-0.0717952"
+          }
+        ],
+        "brandUrl": "BTGroup",
+        "unifiedUrlTitle": "Software-Developer",
+        "unifiedStandardStart": "19/08/2026",
+        "currency": [
+          "GBP"
+        ],
+        "unifiedStandardTitle": "Software Developer",
+        "id": "61472",
+        "urlTitle": "Software-Developer"
+      }
+    },
+    {
+      "response": {
+        "jobLocationShort": [
+          "Building A, Assembly Bristol, Bristol, United Kingdom, ",
+          "Ipswich Adastral, Ipswich, United Kingdom, "
+        ],
+        "supportedLocales": [
+          "en_GB"
+        ],
+        "sfstd_jobLocation_obj": [
+          "GBR Bristol - Assembly",
+          "GBR Ipswich - A04 Adastral Pk"
+        ],
+        "sfstd_marketingBrand_obj": [
+          "BT"
+        ],
+        "jobLocationShortWithCoordinates": [
+          {
+            "value": "Building A, Assembly Bristol, Bristol, United Kingdom, ",
+            "key": "51.4537627,-2.5844576"
+          },
+          {
+            "value": "Ipswich Adastral, Ipswich, United Kingdom, ",
+            "key": "52.0587398,1.2789108"
+          }
+        ],
+        "unifiedStandardEnd": "28/09/2026",
+        "brandUrl": "BT",
+        "unifiedUrlTitle": "Research-Specialist%2C-Sustainable-Network-Optimisation",
+        "unifiedStandardStart": "14/09/2026",
+        "currency": [
+          "GBP"
+        ],
+        "unifiedStandardTitle": "Research Specialist, Sustainable Network Optimisation",
+        "id": "62642",
+        "urlTitle": "Research-Specialist%2C-Sustainable-Network-Optimisation"
+      }
+    },
+    {
+      "response": {
+        "jobLocationShort": [
+          "EE Shop[Retail], Milton Keynes, United Kingdom, "
+        ],
+        "supportedLocales": [
+          "en_GB"
+        ],
+        "sfstd_jobLocation_obj": [
+          "GBR Milton Keynes - EEShopR630"
+        ],
+        "sfstd_marketingBrand_obj": [
+          "EE"
+        ],
+        "jobLocationShortWithCoordinates": [
+          {
+            "value": "EE Shop[Retail], Milton Keynes, United Kingdom, ",
+            "key": "52.0427906,-0.7561544"
+          }
+        ],
+        "brandUrl": "EE",
+        "unifiedUrlTitle": "Retail-Advisor",
+        "unifiedStandardStart": "11/09/2026",
+        "currency": [
+          "GBP"
+        ],
+        "unifiedStandardTitle": "Retail Advisor",
+        "id": "62644",
+        "urlTitle": "Retail-Advisor"
+      }
+    },
+    {
+      "response": {
+        "jobLocationShort": [
+          "Building A, Assembly Bristol, Bristol, United Kingdom, ",
+          "Ipswich Orion Building, Ipswich, United Kingdom, ",
+          "Gosforth TE, Newcastle, United Kingdom, ",
+          "Three Snowhill, Birmingham, United Kingdom, ",
+          "One Braham, London, United Kingdom, ",
+          "Manchester Office - Deansgate, Manchester, United Kingdom, "
+        ],
+        "supportedLocales": [
+          "en_GB"
+        ],
+        "sfstd_jobLocation_obj": [
+          "GBR Bristol - Assembly",
+          "GBR Ipswich - Orion Building",
+          "GBR Newcastle  - Gosforth TE",
+          "GBR-Birmingham-Three Snowhill",
+          "GBR-London-BTHQ One Braham",
+          "GBR-Manchester-Deansgate"
+        ],
+        "sfstd_marketingBrand_obj": [
+          "Default BT Group"
+        ],
+        "jobLocationShortWithCoordinates": [
+          {
+            "value": "Ipswich Orion Building, Ipswich, United Kingdom, ",
+            "key": "52.0587398,1.2789108"
+          },
+          {
+            "value": "Manchester Office - Deansgate, Manchester, United Kingdom, ",
+            "key": "53.4801113,-2.2481399"
+          },
+          {
+            "value": "Building A, Assembly Bristol, Bristol, United Kingdom, ",
+            "key": "51.4537627,-2.5844576"
+          },
+          {
+            "value": "Gosforth TE, Newcastle, United Kingdom, ",
+            "key": "55.0050844,-1.6164227"
+          },
+          {
+            "value": "One Braham, London, United Kingdom, ",
+            "key": "51.5143378,-0.0717952"
+          },
+          {
+            "value": "Three Snowhill, Birmingham, United Kingdom, ",
+            "key": "52.4836247,-1.8981703"
+          }
+        ],
+        "unifiedStandardEnd": "31/01/2027",
+        "brandUrl": "default",
+        "unifiedUrlTitle": "Register-Your-Interest-Grads-&amp;-Apprenticeships-2027",
+        "unifiedStandardStart": "26/08/2026",
+        "currency": [
+          "GBP"
+        ],
+        "unifiedStandardTitle": "Register Your Interest Grads & Apprenticeships 2027",
+        "id": "62260",
+        "urlTitle": "Register-Your-Interest-Grads-&amp;-Apprenticeships-2027"
+      }
+    }
+  ],
+  "totalJobs": 212
+}

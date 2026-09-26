@@ -2448,6 +2448,101 @@ def parse_rmk(payload: Any, src: Source) -> Iterator[Job]:
         )
 
 
+# BT Group's jobs.bt.com is the same SuccessFactors RMK product as
+# `parse_rmk` above, addressed at a custom domain and served through
+# SuccessFactors' newer "unified" front end, which renders its results in
+# JavaScript from a JSON endpoint rather than into the page. `parse_rmk`'s
+# `href="/job/..."` scan finds nothing on this markup, not because the board
+# is empty -- it carried 212 open roles on 2026-09-26 -- but because there is
+# nothing there to find until a browser runs the page's own JavaScript.
+# `fetch_rmk_json` reads the same JSON the JavaScript would have fetched.
+def parse_rmk_json(payload: Any, src: Source) -> Iterator[Job]:
+    """`jobSearchResult` rows from SuccessFactors' unified JSON search.
+
+    Each row nests its fields under `response`. The row's own brand
+    (`sfstd_marketingBrand_obj`) wins over the source's company, the same
+    choice `parse_google_careers` makes for Alphabet's own DeepMind, Waymo and
+    YouTube: BT Group's board also carries EE and Plusnet roles under their
+    own names, and relabelling every one of them "BT Group" would make a
+    reader searching for EE unable to find them.
+
+    `id` repeats across pages -- verified live, 47 of 212 rows fetched across
+    the full board on 2026-09-26 were repeats of an id already seen, up to
+    three times for five of them -- so rows are kept by id, first one wins,
+    the same defence `parse_pcsx` and `fetch_amazon` already use for their own
+    platforms' duplicate rows.
+
+    The board states no salary anywhere, only a bare `currency` code with no
+    amount attached to it, so `salary` is left empty rather than built out of
+    a number that was never sent. Same choice as PCSX, which carries no
+    advert text at all.
+
+    `jobLocationShort` is a free-text display string per office
+    ("Euston TE, London, United Kingdom, ", trailing comma from the
+    template), and a role open in several offices carries several. They are
+    joined with "; " and never counted, for the same reason Workday's "2
+    Locations" is never written into the location column: a count sitting
+    where a place would sits there, undetected. The two written parts are NOT
+    consistently city-then-site or site-then-city -- verified against BT's
+    own data, "Ipswich, Ipswich Orion Building" and "One Braham, London" both
+    occur -- so unlike PCSX's reversal this does not try to reorder them: a
+    wrong guess presented as the city would be worse than the platform's own
+    words, unreordered.
+    """
+    data = payload if isinstance(payload, dict) else {}
+    rows = data.get("jobSearchResult") or []
+    base = f"https://{urlparse(src.url).netloc}"
+
+    seen: set[str] = set()
+    for row in rows:
+        resp = (row or {}).get("response") if isinstance(row, dict) else None
+        if not isinstance(resp, dict):
+            continue
+        jid = resp.get("id")
+        title = _text(resp.get("unifiedStandardTitle"))
+        url_title = resp.get("urlTitle") or resp.get("unifiedUrlTitle")
+        if not title or not jid or not url_title:
+            continue
+        key = str(jid)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        locale = ""
+        supported = resp.get("supportedLocales")
+        if isinstance(supported, list) and supported and isinstance(supported[0], str):
+            locale = supported[0]
+        # Verified live: "/job/<urlTitle>/<id>-<locale>" is the exact link
+        # SuccessFactors' own results widget builds
+        # (`j2w.searchResultsUnify.min.js`), and it is the one that resolves
+        # to the advert -- "/job/<id>-<locale>" alone, with no title slug,
+        # 200s into BT's generic 404 page rather than the posting, which
+        # would have stored a dead link as a real one.
+        url = f"{base}/job/{url_title}/{jid}" + (f"-{locale}" if locale else "")
+
+        places = [p for p in (resp.get("jobLocationShort") or [])
+                 if isinstance(p, str)]
+        cleaned = [re.sub(r"[,\s]+$", "", _WS.sub(" ", p.strip()))
+                  for p in places]
+        loc = "; ".join(dict.fromkeys(p for p in cleaned if p))
+
+        company = _text(resp.get("sfstd_marketingBrand_obj")) or src.company
+
+        yield Job(
+            company=company,
+            title=title,
+            url=url,
+            platform="rmk_json",
+            location=loc,
+            remote=_remote(loc, title),
+            posted_at=_iso(resp.get("unifiedStandardStart")),
+            description="",
+            salary=Salary(),
+            source_id=src.key,
+            flags=["not screened: search listing only, open the advert"],
+        )
+
+
 # --------------------------------------------------------------------------
 # Avature
 # --------------------------------------------------------------------------

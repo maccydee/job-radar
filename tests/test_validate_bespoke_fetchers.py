@@ -74,8 +74,8 @@ class BespokeFetchersAreUsed(unittest.TestCase):
         self.assertEqual(c.get("name"), "taleo")
 
     def test_every_platform_with_a_fetcher_gets_it(self):
-        for platform in ("amazon", "pcsx", "phenom", "rmk", "avature",
-                         "nhs", "workday", "workable_search"):
+        for platform in ("amazon", "pcsx", "phenom", "rmk", "rmk_json",
+                         "avature", "nhs", "workday", "workable_search"):
             with self.subTest(platform=platform):
                 c = self._probe(platform, f"https://{platform}.invalid/board")
                 self.assertEqual(c.get("name"), platform)

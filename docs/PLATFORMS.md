@@ -7,7 +7,7 @@ gets wrong. Each of these cost a debugging session, and they are the reason
 the adapters are shaped the way they are. Cornerstone OnDemand has a row here
 despite being unreadable, because the reason is worth writing down.
 
-**What this file does and does not cover.** The code carries 32 adapters, and
+**What this file does and does not cover.** The code carries 33 adapters, and
 these rows account for 23 of them, the Lever row covering both its
 deployments. Nineteen of the rows are platforms the bundled source list
 actually uses; JazzHR, Reed and Adzuna have a row and no entry on it, and

@@ -1878,6 +1878,25 @@ def fetch_avature(
 # than being truncated.
 RMK_PAGE = 25
 
+# What the platform itself renders when a search genuinely matched nothing.
+# Checked live on 2026-09-26 against two different tenant templates: Adidas's
+# table layout and Transport for London's card layout both answer a
+# no-match search with `id="noresults"` and a "there are currently no open
+# positions matching ..." message -- the scaffold is there, it is just
+# telling us zero. That is a fact about the search, not about this code, and
+# `fetch_rmk` finding no `/job/` href on the same page it finds this on is a
+# genuinely empty result.
+#
+# BT Group's jobs.bt.com is also SuccessFactors RMK, addressed at a custom
+# domain rather than a jobs2web.com one, but it serves SuccessFactors'
+# newer client-rendered "unified" front end: the HTML sent before JavaScript
+# runs has neither a `/job/` link nor this marker, on a board carrying 212
+# open roles, because the whole results area -- including its own empty
+# state -- is built client-side. Nothing here can read that page, and a page
+# with neither signal has not told us anything a search can be judged on, so
+# it must not be read as a board with nothing.
+_RMK_ANSWERED_SOMETHING = re.compile(r'id=["\']noresults["\']', re.I)
+
 
 def fetch_rmk(
     src: Source,
@@ -1903,6 +1922,12 @@ def fetch_rmk(
     seen: set[str] = set()
     first_error: Result | None = None
     answered = False
+    # The last HTML string a 200 actually carried, kept so that a walk which
+    # never finds a `/job/` href has something left to check for the
+    # platform's own "no results" marker before it is allowed to report zero.
+    # `_no_rows` below only sees a bare `answered` bool, which is exactly the
+    # loss that let a client-rendered shell pass as an empty board.
+    last_html: str | None = None
 
     for term in (terms or [""])[:3]:
         truncated = False
@@ -1919,6 +1944,7 @@ def fetch_rmk(
                     transport=res.transport)
                 break
             answered = True
+            last_html = res.payload
             fresh = set(re.findall(r'href="([^"]*?/job/[^"?]+)"',
                                    res.payload)) - seen
             # Stop on nothing new, never on a short page. A tenant that serves
@@ -1937,8 +1963,132 @@ def fetch_rmk(
         else:
             truncated = True
     if not pages:
+        # `answered` alone cannot tell a genuine "nothing matched" page
+        # (the platform's own no-results marker, see `_RMK_ANSWERED_SOMETHING`)
+        # apart from a page that never rendered a listing at all: both are a
+        # 200 carrying an HTML string with zero `/job/` links in it. Only the
+        # first is a fact about the employer. Measured live against BT
+        # Group's jobs.bt.com, on SuccessFactors' newer client-rendered front
+        # end: 172KB of HTML, zero `/job/` links, no no-results marker
+        # either, and 212 open roles that never appear until JavaScript runs.
+        if (first_error is None and answered and last_html is not None
+                and not _RMK_ANSWERED_SOMETHING.search(last_html)):
+            return Result(
+                src, error="the page answered but shows none of this "
+                           "platform's usual results markup -- no `/job/` "
+                           "link and no \"no results\" message -- so this "
+                           "reads as a board this cannot parse rather than "
+                           "one with no vacancies")
         return _no_rows(src, first_error, answered)
     return Result(src, payload="".join(pages), truncated=truncated)
+
+
+# BT Group's jobs.bt.com serves SuccessFactors' newer "unified" front end:
+# the plain HTML `fetch_rmk` reads carries no results at all, because the
+# whole results area is built client-side from this JSON endpoint. Same
+# vendor, same product, a different rendering mode, so it is a sibling
+# fetcher rather than a branch inside `fetch_rmk`.
+#
+# The page's own `j2w.SearchManager.search` dispatches a `{keywords, locale,
+# location, pageNumber, sortBy: "recent"}` body to `/services/recruiting/v1/
+# jobs`. That is NOT `{searchText, offset, limit}`, which also answers 200
+# with real-looking rows: measured live on 2026-09-26, two calls with that
+# shape and identical `offset` returned two different sets of ten jobs, so
+# whatever it is paging on is not the offset it was given. The page's own
+# body, `pageNumber`-keyed, was stable across repeats and returned disjoint
+# pages -- confirmed by walking all 212 and finding each `id` exactly where
+# its page said it would be.
+#
+# The page size is ten, fixed, the same shape as PCSX: asking for a `limit`
+# of 5, 10, 20, 50 or 100 all came back with ten rows. `totalJobs` is the
+# board's own count and moves with real postings closing and opening, but it
+# is not the count of DISTINCT postings: BT list some roles more than once in
+# their own index (47 of 212 rows fetched on 2026-09-26 were repeats of an
+# id already returned), so it is read as an upper bound and a truncation
+# signal, never as a target for `len(seen)` to reach.
+RMK_JSON_PAGE = 10
+
+
+def fetch_rmk_json(
+    src: Source,
+    terms: list[str] | None = None,
+    *,
+    timeout: int = 20,
+    retries: int = 2,
+    user_agent: str = "job-radar/0.1",
+    max_pages: int = 400,
+) -> Result:
+    """Walk SuccessFactors' unified JSON search on `pageNumber`, ten a page.
+
+    Deliberately unfiltered, like `fetch_pcsx`: a single tenant's whole board
+    is a couple of hundred roles here, cheap to read in full, and the terms
+    come from the reader's config rather than the employer's -- a source that
+    read only the titles one person asked for would be that person's search
+    saved as an employer list. See CLAUDE.md.
+
+    `src.url` is the tenant's search PAGE (`https://jobs.bt.com/search/?...`),
+    kept that way so the source list reads the same as every other `rmk`
+    entry; the API host is the same host with a fixed path, built here.
+    """
+    session = _thread_session()
+    host = urlparse(src.url).netloc
+    endpoint = f"https://{host}/services/recruiting/v1/jobs"
+    seen: dict[str, dict] = {}
+    total = 0
+    truncated = False
+
+    for page in range(max_pages):
+        probe = Source(
+            company=src.company, url=endpoint, platform="rmk_json",
+            sector=src.sector, country=src.country, method="POST",
+            body={"keywords": "", "locale": "en_GB", "location": "",
+                  "pageNumber": page, "sortBy": "recent"},
+        )
+        res = fetch_one(probe, timeout=timeout, retries=retries,
+                        user_agent=user_agent, session=session)
+        data = res.payload if isinstance(res.payload, dict) else None
+        # A page past the end drops `jobSearchResult` entirely rather than
+        # sending an empty list -- verified live, page 22 of BT's 212-role
+        # board answered `{"totalJobs": 212}` and nothing else -- so its
+        # absence is not by itself evidence of anything wrong; `totalJobs`
+        # being there too is what says this is still SuccessFactors' unified
+        # search answering in its own shape. Only when NEITHER key is present
+        # does this stop trusting the payload, the same distinction
+        # `fetch_google_careers` draws for a page with no `ds:1` boot payload.
+        # And only the first page gets to make that call: a shape that held
+        # up for N pages and then broke is a truncation, carried out with
+        # what was already read, never a reason to discard it.
+        if (not res.ok or data is None
+                or ("jobSearchResult" not in data and "totalJobs" not in data)):
+            if seen:
+                truncated = True
+                break
+            if not res.ok:
+                return res
+            return Result(
+                src, status=res.status,
+                error="no jobSearchResult or totalJobs in the response: the "
+                      "API shape changed, or this is not SuccessFactors' "
+                      "unified JSON search")
+        rows = [r for r in (data.get("jobSearchResult") or [])
+               if isinstance(r, dict)]
+        total = max(total, int(data.get("totalJobs") or 0))
+        for r in rows:
+            resp = r.get("response") if isinstance(r.get("response"), dict) else None
+            key = resp.get("id") if resp else None
+            if key is not None:
+                seen.setdefault(str(key), r)
+        # Never on a short page: BT's own last page held 2 of 212. Stopping
+        # on `len(seen) >= total` never fires here in practice, because
+        # `total` counts BT's own duplicate rows and `seen` does not, but it
+        # costs nothing to keep as the same belt-and-braces PCSX uses.
+        if not rows or (total and len(seen) >= total):
+            break
+    else:
+        truncated = True
+    return Result(src, payload={"jobSearchResult": list(seen.values()),
+                                "totalJobs": total},
+                  truncated=truncated)
 
 
 # Taleo's career section page is a JavaScript shell. It carries the search
@@ -2166,6 +2316,9 @@ PAGE_SIZES = {
     # The Teamtailor builder asks for per_page=200; the feed's own default is
     # the first 100, so a board sitting on either number is worth a look.
     "teamtailor": 200,
+    # SuccessFactors' unified JSON search answers ten however many `limit`
+    # asks for -- verified live against 5, 10, 20, 50 and 100.
+    "rmk_json": RMK_JSON_PAGE,
 }
 
 
@@ -2375,6 +2528,9 @@ def _fetch_dispatch(src, limiter, timeout, retries, ua, terms, keys=None) -> Res
     if src.platform == "rmk":
         return fetch_rmk(src, terms, timeout=timeout, retries=retries,
                          user_agent=ua)
+    if src.platform == "rmk_json":
+        return fetch_rmk_json(src, terms, timeout=timeout, retries=retries,
+                              user_agent=ua)
     if src.platform == "taleo":
         return fetch_taleo(src, terms, timeout=timeout, retries=retries,
                            user_agent=ua)

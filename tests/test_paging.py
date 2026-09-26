@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from jobradar import fetch as fetch_mod
 
 PAGERS = ["fetch_workday", "fetch_workable_search", "fetch_nhs", "fetch_adzuna",
-          "fetch_phenom", "fetch_avature", "fetch_rmk"]
+          "fetch_phenom", "fetch_avature", "fetch_rmk", "fetch_rmk_json"]
 
 SRC = (Path(__file__).resolve().parent.parent / "jobradar" / "fetch.py"
        ).read_text(encoding="utf-8")

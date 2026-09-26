@@ -132,6 +132,27 @@ phrase caught the comment saying why the phrase was wrong, and a test checking
 a Windows flag was unused caught the sentence saying so. Parse it, or read the
 one function rather than the module.
 
+## "Scan" means more than `job-radar scan`
+
+A scan is three things, in this order:
+
+1. **Update the sources, then run `job-radar scan`.** The reader does not ask
+   for the source update separately and should not have to.
+2. **Query any job-search connector the assistant has** for the reader's wanted
+   titles and country. A connector lives in the assistant's session, not in this
+   repo, so it cannot run from the scheduled scan and there is no way around
+   that: the scheduled job covers the boards, and the connector pass happens
+   when the reader asks. Never scrape a site that a connector exists for. See
+   "Never work around bot protection" below.
+3. **Report both together**, saying which came from where. A role that only the
+   connector found is also a coverage gap: find the employer's own board and
+   `discover --add` it, so the next scan catches it without the connector.
+
+Connectors are metered and typically count rejected calls against the limit, so
+retrying quickly makes it worse. Pace them and treat them as lookup, never as a
+sweep. Where one exposes employer salary data, it is worth a call on anything
+that reaches a shortlist, because most adverts state no salary at all.
+
 ## What not to do
 
 - **Do not price, place or judge a posting by the reader's config.** The
@@ -184,7 +205,7 @@ while none of them was true. Derive it, or leave it in the run's own output.
 exactly this reason.
 
 Current, if you need them for a comment: 17,810 employer boards, 17,814
-entries, 3 keyword templates, 24 board platforms in the data, 32 adapters
+entries, 3 keyword templates, 24 board platforms in the data, 33 adapters
 written.
 
 ## Style
