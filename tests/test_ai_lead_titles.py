@@ -23,6 +23,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from jobradar.config import Config  # noqa: E402
 from jobradar.models import Job     # noqa: E402
 from jobradar.screen import match   # noqa: E402
+from jobradar.models import Source  # noqa: E402
+from jobradar.sources import expand_templates, MAX_KEYWORD_TITLES  # noqa: E402
+from urllib.parse import urlparse, parse_qs  # noqa: E402
 
 # A config shaped like the problem: engineering terms, plus AI terms that are
 # all two-word phrases. Deliberately small and synthetic.
@@ -98,3 +101,61 @@ def test_a_title_carrying_head_of_ai_matched_before_the_fix():
         "the loose matcher changed; the claim that this fix is purely "
         "additive needs re-checking"
     )
+
+
+# The same titles.include drives two different things, and only one of them
+# is bounded. `match` filters every title it is given, in any order. But a
+# keyword platform such as LinkedIn is a search, not a board, so
+# `expand_templates` turns the list into one query per title and stops at
+# MAX_KEYWORD_TITLES. A term past that point is still filtered FOR and never
+# searched FOR, so a role only that term would have found is never fetched at
+# all. Nothing downstream can see the difference, because the posting never
+# arrives.
+
+def _linkedin_source():
+    return Source(
+        company="LinkedIn",
+        platform="linkedin",
+        country="UK",
+        keyword_template=True,
+        url=(
+            "https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings"
+            "/search?keywords={keyword}&location=United%20Kingdom&start=0"
+        ),
+    )
+
+
+def _queries(terms):
+    out = []
+    for s in expand_templates([_linkedin_source()], list(terms)):
+        q = parse_qs(urlparse(s.url).query)
+        out.append(q["keywords"][0])
+    return out
+
+
+def test_a_keyword_search_is_capped_and_later_terms_are_never_searched():
+    """The cap is real, and a term past it produces no query at all."""
+    terms = [f"title number {n}" for n in range(MAX_KEYWORD_TITLES + 3)]
+    qs = _queries(terms)
+    assert len(qs) == MAX_KEYWORD_TITLES
+    for beyond in terms[MAX_KEYWORD_TITLES:]:
+        assert beyond not in qs, (
+            f"{beyond!r} is past the cap and must not be searched for"
+        )
+
+
+def test_a_term_past_the_cap_still_filters_but_is_never_searched():
+    """The asymmetry itself: filtering ignores position, searching does not.
+
+    This is what made the "AI Lead" gap invisible. Adding the term far down
+    the list closes the filter half and leaves the search half untouched, so
+    the role is still never fetched.
+    """
+    padding = [f"unrelated title {n}" for n in range(MAX_KEYWORD_TITLES)]
+    terms = padding + ["ai lead"]
+
+    # Filtered for: position is irrelevant to the title gate.
+    assert _matches("AI Automation Lead", terms)
+
+    # Not searched for: position is everything to the keyword expansion.
+    assert "ai lead" not in _queries(terms)
