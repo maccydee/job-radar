@@ -752,70 +752,98 @@ def merge_duplicates(con, cfg=None) -> int:
     what this used to do, was the one place the two passes disagreed: a role
     open in two cities kept both when the copies arrived in one scan and lost
     the second city when they arrived a day apart.
+
+    The one thing company plus title does NOT settle is pay. Kraken posts every
+    role on Ashby twice, once for the United States with a band and once for the
+    rest of the world with none, so the merge joined twenty-one countries onto
+    the US row and left a US band on a row reading as a UK vacancy, linking to
+    the US application. `screen.pay_attributable_groups` splits a group that far
+    and no further, and it is shared with the scan-time pass so both still
+    answer the same-job question identically.
     """
-    from .screen import directness
+    from .screen import (PayMember, directness, pay_attributable_groups,
+                         pay_key)
     _ensure_columns(con)
     groups: dict[tuple, list] = {}
     for r in con.execute(
             "SELECT uid, company, title, platform, description, salary_confirmed, "
-            "fit, fit_why, location, flags FROM roles").fetchall():
+            "fit, fit_why, location, flags, salary_currency, salary_min, "
+            "salary_max, salary_period FROM roles").fetchall():
         key = (r["company"].strip().lower(), r["title"].strip().lower())
         groups.setdefault(key, []).append(r)
 
     merged = 0
-    for members in groups.values():
-        if len(members) < 2:
+    for group in groups.values():
+        if len(group) < 2:
             continue
-        members.sort(key=lambda r: (directness(r["platform"]),
-                                    r["salary_confirmed"] or 0,
-                                    len(r["description"] or "")), reverse=True)
-        keep, losers = members[0], members[1:]
-        _keep_locations(con, keep, members, cfg)
-        for lose in losers:
-            st = con.execute("SELECT status,note FROM role_state WHERE uid=?",
-                             (lose["uid"],)).fetchone()
-            if st and st["status"] != "new":
-                cur = con.execute("SELECT status,note FROM role_state WHERE uid=?",
-                                  (keep["uid"],)).fetchone()
-                cur_s = cur["status"] if cur else "new"
-                # Carry the further-along status across, not merely any status
-                # onto a blank one. The old rule only copied when the keeper
-                # was "new", so merging a role you were interviewing for into
-                # one you had merely marked interested threw the interview
-                # away -- and drafting a CV sets a role to "interested", so one
-                # click was enough to arm it. This runs unattended on scan.
-                if PROGRESS.get(st["status"], 0) > PROGRESS.get(cur_s, 0):
-                    set_status(con, keep["uid"], st["status"], st["note"] or None)
-                elif st["note"] and not (cur and cur["note"]):
-                    set_status(con, keep["uid"], cur_s, st["note"])
-            # The fit score moves for the same reason the artifacts do: it was
-            # paid for. `rank` spends real money and real minutes on it, and
-            # this function runs unattended on every scan, so a duplicate
-            # arriving on Tuesday quietly deleted Monday's score. It did not
-            # read as a loss either: the keeper's fit stays -1, and -1 means
-            # "not yet judged", so the role the model had scored 91 came back
-            # as unranked, indistinguishable from one that had never been
-            # looked at -- and `rank` then charged for it a second time.
-            #
-            # Only ever into a gap. A keeper that already has a score keeps it:
-            # its score was judged against its own description, which is the
-            # longer one, which is why it is the keeper.
-            if lose["fit"] is not None and lose["fit"] >= 0:
-                kept_fit = con.execute("SELECT fit FROM roles WHERE uid=?",
-                                       (keep["uid"],)).fetchone()
-                # Spelled out rather than `kept_fit["fit"] or -1`: a genuine
-                # score of 0 is falsy, and treating it as "no score" would let
-                # the merge overwrite the one verdict `rank` calls terminal.
-                kf = kept_fit["fit"] if kept_fit is not None else None
-                if kf is None or kf < 0:
-                    con.execute("UPDATE roles SET fit=?, fit_why=? WHERE uid=?",
-                                (lose["fit"], lose["fit_why"] or "", keep["uid"]))
-            con.execute("UPDATE artifacts SET uid=? WHERE uid=?",
-                        (keep["uid"], lose["uid"]))
-            con.execute("DELETE FROM jobs WHERE uid=?", (lose["uid"],))
-            con.execute("DELETE FROM role_state WHERE uid=?", (lose["uid"],))
-            con.execute("DELETE FROM roles WHERE uid=?", (lose["uid"],))
-            merged += 1
+        # Same question the scan-time pass asks, asked the same way, because
+        # the two of them disagreeing is the older bug this function's
+        # docstring describes. Kraken's US posting and its rest-of-world
+        # posting are one company and one title and are not one vacancy: the
+        # band belongs to the US row alone, and merging them wrote it onto a
+        # row that names the United Kingdom first.
+        subgroups = pay_attributable_groups([
+            PayMember(rank=(directness(r["platform"]),
+                            r["salary_confirmed"] or 0,
+                            len(r["description"] or "")),
+                      location=r["location"] or "",
+                      pay=pay_key(r["salary_currency"], r["salary_min"],
+                                  r["salary_max"], r["salary_period"]),
+                      item=r)
+            for r in group])
+        for members in subgroups:
+            if len(members) < 2:
+                continue
+            members.sort(key=lambda r: (directness(r["platform"]),
+                                        r["salary_confirmed"] or 0,
+                                        len(r["description"] or "")), reverse=True)
+            keep, losers = members[0], members[1:]
+            _keep_locations(con, keep, members, cfg)
+            for lose in losers:
+                st = con.execute("SELECT status,note FROM role_state WHERE uid=?",
+                                 (lose["uid"],)).fetchone()
+                if st and st["status"] != "new":
+                    cur = con.execute("SELECT status,note FROM role_state WHERE uid=?",
+                                      (keep["uid"],)).fetchone()
+                    cur_s = cur["status"] if cur else "new"
+                    # Carry the further-along status across, not merely any status
+                    # onto a blank one. The old rule only copied when the keeper
+                    # was "new", so merging a role you were interviewing for into
+                    # one you had merely marked interested threw the interview
+                    # away -- and drafting a CV sets a role to "interested", so one
+                    # click was enough to arm it. This runs unattended on scan.
+                    if PROGRESS.get(st["status"], 0) > PROGRESS.get(cur_s, 0):
+                        set_status(con, keep["uid"], st["status"], st["note"] or None)
+                    elif st["note"] and not (cur and cur["note"]):
+                        set_status(con, keep["uid"], cur_s, st["note"])
+                # The fit score moves for the same reason the artifacts do: it was
+                # paid for. `rank` spends real money and real minutes on it, and
+                # this function runs unattended on every scan, so a duplicate
+                # arriving on Tuesday quietly deleted Monday's score. It did not
+                # read as a loss either: the keeper's fit stays -1, and -1 means
+                # "not yet judged", so the role the model had scored 91 came back
+                # as unranked, indistinguishable from one that had never been
+                # looked at -- and `rank` then charged for it a second time.
+                #
+                # Only ever into a gap. A keeper that already has a score keeps it:
+                # its score was judged against its own description, which is the
+                # longer one, which is why it is the keeper.
+                if lose["fit"] is not None and lose["fit"] >= 0:
+                    kept_fit = con.execute("SELECT fit FROM roles WHERE uid=?",
+                                           (keep["uid"],)).fetchone()
+                    # Spelled out rather than `kept_fit["fit"] or -1`: a genuine
+                    # score of 0 is falsy, and treating it as "no score" would let
+                    # the merge overwrite the one verdict `rank` calls terminal.
+                    kf = kept_fit["fit"] if kept_fit is not None else None
+                    if kf is None or kf < 0:
+                        con.execute("UPDATE roles SET fit=?, fit_why=? WHERE uid=?",
+                                    (lose["fit"], lose["fit_why"] or "", keep["uid"]))
+                con.execute("UPDATE artifacts SET uid=? WHERE uid=?",
+                            (keep["uid"], lose["uid"]))
+                con.execute("DELETE FROM jobs WHERE uid=?", (lose["uid"],))
+                con.execute("DELETE FROM role_state WHERE uid=?", (lose["uid"],))
+                con.execute("DELETE FROM roles WHERE uid=?", (lose["uid"],))
+                merged += 1
     return merged
 
 
