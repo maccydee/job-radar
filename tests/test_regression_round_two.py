@@ -85,12 +85,24 @@ MONTHLY = (
 )
 
 
-def test_a_monthly_figure_is_never_confirmed_as_an_annual_one():
-    """The floor deletes on a confirmed figure. A monthly salary read as
-    annual is a 96,000 job hidden with the reason "pay below floor", which
-    states the opposite of the advert."""
-    wrong = [t for t in MONTHLY if parse_text(t).confirmed]
-    assert not wrong, f"read as an annual figure: {wrong}"
+def test_a_monthly_figure_is_annualised_not_read_as_the_year_figure():
+    """The floor deletes on a confirmed figure. A monthly salary STORED
+    as the bare monthly number would be a 96,000 job hidden with the reason
+    "pay below floor", which states the opposite of the advert -- so
+    `_scan` multiplies a monthly figure up by twelve rather than storing it
+    unmultiplied. Flo Health's Greenhouse posting states "Salary Range -
+    gross per month ... €9.000 - €11.000 EUR", and this codebase's own
+    live data held it as a confirmed €9,000-€11,000 A YEAR before this fix,
+    for the same reason: a monthly figure with nowhere to put "month" used
+    to be thrown away entirely rather than annualised, and a second match on
+    the trailing number alone then read it as an unlabelled annual one."""
+    for t in MONTHLY:
+        s = parse_text(t)
+        assert s.confirmed and s.period == "year", (t, s)
+        # 8 EUR-shaped adverts above state 8.000 a month; annualised that is
+        # 96,000, not 8,000.
+        if "8.000" in t or "8k" in t.lower():
+            assert s.max == 96000.0, (t, s)
 
 
 def test_an_annual_figure_still_confirms():

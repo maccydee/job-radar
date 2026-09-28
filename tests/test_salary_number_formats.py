@@ -80,21 +80,23 @@ def test_the_number_format_did_not_arrive_without_the_month_words():
     """Both halves, in one test, because shipping the first without the second
     would have been a worse bug than the one being fixed.
 
-    A Dutch or German monthly figure has no period `Salary` can store, and the
-    codebase already refuses to read one as annual for exactly this reason.
-    Refusing it means an unconfirmed salary, which is shown to the reader and
-    labelled; reading it as annual means 4,500 against any floor, which is a
-    role deleted in silence.
+    `Salary` has no period to store "month" in, so a Dutch or German monthly
+    figure is multiplied by twelve and stored as the year it adds up to,
+    exactly as `_REED_ANNUALISE` and `from_pinpoint` already do for a weekly
+    or monthly rate off a structured API. The alternative -- reading "€
+    4.500 bruto per maand" as an unmultiplied 4,500 a year -- is a role paying
+    54,000 hidden behind any floor at all, on a number the advert never
+    stated as its annual salary.
     """
     year = parse_text("Salaris: € 60.000 - € 75.000 per jaar")
     assert year.confirmed and year.max == 75000.0, year
 
-    for monthly in ("Salaris: € 4.500 bruto per maand",
-                    "Gehalt: EUR 5.500 pro Monat",
-                    "EUR 5.500 monatlich"):
+    for monthly, annual in (("Salaris: € 4.500 bruto per maand", 54000.0),
+                            ("Gehalt: EUR 5.500 pro Monat", 66000.0),
+                            ("EUR 5.500 monatlich", 66000.0)):
         s = parse_text(monthly)
-        assert not s.confirmed, \
-            f"a monthly figure was confirmed as a year's pay: {monthly} -> {s}"
+        assert s.confirmed and s.period == "year" and s.max == annual, \
+            f"{monthly} -> {s}"
 
 
 def test_the_german_year_words_are_read_as_a_year():

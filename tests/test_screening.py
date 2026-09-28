@@ -143,13 +143,18 @@ def test_the_period_word_nearest_the_figure_wins():
     assert sal.confirmed and sal.period == "year", (sal.raw, sal.period)
 
 
-def test_a_monthly_figure_is_never_confirmed_as_an_annual_one():
+def test_a_monthly_figure_is_annualised_not_read_as_the_year_figure():
     """`Salary` models year, day and hour and has nowhere to put a month, so
-    a monthly wage was stored as if it were the year's pay -- twelve times too
-    small, and hidden by any floor at all. Columbia Shipmanagement advertise
-    a $10,500 a month officer's berth exactly this way."""
+    a monthly wage stored unmultiplied would be the year's pay read twelve
+    times too small and hidden by any floor at all. Columbia Shipmanagement
+    advertise a $10,500 a month officer's berth exactly this way, and the fix
+    is to multiply it up rather than to throw it away: $10,500 a month is a
+    genuine $126,000 a year, which clears a $120,000 floor, whereas the bare
+    $10,500 the old code refused to confirm would have been silently dropped
+    from a shortlist it belongs on had that floor ever been applied to it."""
     sal = parse_text("Salary: $10,500 per month, plus leave pay.")
-    assert not sal.confirmed, sal.raw
+    assert sal.confirmed and sal.period == "year", sal
+    assert sal.max == 126000.0, sal
     assert clears_floor(sal, 120000.0, "USD")[0]
 
 
@@ -157,10 +162,16 @@ def test_a_period_word_straddling_the_block_boundary_is_still_read():
     """The scan works in blocks -- the first 400 characters, then the rest --
     and the period question used to be asked of the block. A label that
     started inside the block and finished outside it was invisible: "$10,000+
-    per month" sat at character 383 and was confirmed as an annual salary."""
+    per month" sat at character 383, "per month" was never read, and the
+    figure was confirmed as an annual $10,000 salary -- rather than the
+    annualised $120,000 the advert actually states, and a figure that small
+    is also below the plausibility floor, so getting this wrong reads as
+    "unconfirmed" now rather than as a wrong number, which is the safer of
+    the two failures but still the wrong one to ship."""
     lead = "x" * 360
     sal = parse_text(f"{lead} Strong performers earn $10,000+ per month.")
-    assert not sal.confirmed, sal.raw
+    assert sal.confirmed and sal.period == "year", sal
+    assert sal.max == 120000.0, sal
 
 
 def test_a_salary_below_the_floor_is_still_dropped():

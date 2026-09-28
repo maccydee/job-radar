@@ -326,6 +326,50 @@ def _period_near(text: str, start: int, end: int) -> str | None:
     return best[1] if best else None
 
 
+# A full stop, then whitespace, then a capital letter: the ordinary shape of
+# one sentence ending and the next beginning. `full` has already had every
+# run of whitespace collapsed to a single space by `parse_text`, so a
+# newline cannot be used to spot a paragraph break by the time this runs; a
+# sentence boundary is what survives instead.
+_SENTENCE_BREAK = re.compile(r"\.\s+[A-Z]")
+
+
+def _month_word_is_a_different_sentence(text: str, start: int, end: int) -> bool:
+    """Is the "month" `_period_near` found actually talking about something
+    else, on the far side of a full stop?
+
+    Annualising on a wrong "month" multiplies a real figure by twelve, which
+    is a wrong CONFIRMED number, not the silent unconfirmed result a wrong
+    "day" or "hour" produces. The Financial Conduct Authority's advert
+    reads "...in a minimum of 60% per month. The salary range for the role
+    is London - £140,000 - £190,000...": "per month" sits 42 characters
+    before the figure, comfortably inside `_PERIOD_WINDOW`, and describes
+    office attendance, not pay. A sentence boundary between the two is a
+    cheap, reliable sign of exactly that, so annualising is refused and the
+    figure falls back to the ordinary chunk-level default instead, which is
+    what it would have got with no period word nearby at all.
+
+    Only the stretch between the figure and the NEAREST "month" match is
+    checked, the same stretch `_period_near` used to believe it in the first
+    place. Checking the whole window either side, lead and trail together,
+    was wrong in the opposite direction: Flo Health's own figure is followed
+    by "EUR How we work We're a mission-led..." within the trail window,
+    whose own sentence break has nothing to do with the "month" evidence
+    that sits, unbroken, in the LEAD.
+    """
+    lead = text[max(0, start - _PERIOD_WINDOW):start]
+    trail = text[end:end + _PERIOD_WINDOW]
+    lead_gap = min((len(lead) - m.end() for m in _PER_MONTH.finditer(lead)),
+                   default=None)
+    trail_gap = min((m.start() for m in _PER_MONTH.finditer(trail)),
+                    default=None)
+    if lead_gap is not None and (trail_gap is None or lead_gap <= trail_gap):
+        return bool(_SENTENCE_BREAK.search(lead[len(lead) - lead_gap:]))
+    if trail_gap is not None:
+        return bool(_SENTENCE_BREAK.search(trail[:trail_gap]))
+    return False
+
+
 # HTML entities that survive into a description and break a pay range apart.
 #
 # Greenhouse double-encodes: the adapter's single `html.unescape` turns
@@ -490,6 +534,83 @@ _PAY_CONTEXT = re.compile(
     r"salary range|annum|per year|pa\b)\b", re.I)
 
 
+# A range of two whole numbers that are each a plausible calendar year is a
+# date, not pay. Directsupply's footer reads "© 2013 to 2026 Direct Supply,
+# Inc. All rights reserved.", and with no currency mark required by `_RANGE`
+# and "package" sitting in the sentence just before it ("Generous benefit
+# package available."), that cleared the pay-context gate and came back as a
+# confirmed range of £2,013 to £2,026. The plausibility floor below would
+# also catch this one on its size alone, but a copyright notice is not an
+# unusually small salary, it is not a salary, and saying so directly means
+# the rule survives even if the floor value ever moves.
+_YEAR_MIN, _YEAR_MAX = 1990, 2035
+
+
+def _looks_like_year_range(lo: float, hi: float) -> bool:
+    """Two whole numbers that could each be this era's calendar year."""
+    return (float(lo).is_integer() and float(hi).is_integer()
+            and _YEAR_MIN <= lo <= _YEAR_MAX and _YEAR_MIN <= hi <= _YEAR_MAX)
+
+
+# A figure this small is not a low salary, it is something else that looked
+# like one: a benefits budget ("£1,000 annual education budget" at Elliptic
+# and Smarkets, both read as the whole salary), a day or hour rate that
+# slipped past the rate patterns, or a period word too far away to be read.
+# Only a CONFIRMED figure can disqualify a role or clear a reader's floor, so
+# believing one of these is worse than leaving the posting unconfirmed: a
+# role that pays properly gets hidden behind any floor at all, on a number
+# the advert never stated as its salary.
+#
+# 15,000 sits between the highest live misparse this bug produced -- Flo
+# Health's "€9,000 - €12,000", almost certainly a monthly figure -- and the
+# lowest genuine confirmed salary in the same data, Civica's £25,000 Senior
+# Engineering Manager role. It is not the reader's floor and this function
+# never sees the reader's floor: `enrich.run` calls `parse_text` with the
+# JOB's own currency, exactly as `CURRENCY_OF_COUNTRY` above exists to do, and
+# this check runs before that figure is ever compared to anyone's config.
+#
+# The number is also, deliberately, a safe floor for every currency this
+# module knows, not just GBP. A full YEAR of pay below 15,000 units of a
+# currency is not plausible even for the weakest-earning country
+# `CURRENCY_OF_COUNTRY` maps a currency to: Nigeria's statutory minimum wage
+# alone clears 15,000 naira several times over across twelve months, and the
+# same is true of every other entry in that table. So one number is safe to
+# apply everywhere without asking what the currency is worth, which is the
+# opposite mistake to the one this file's history warns about: it is a
+# sanity check on the SIZE of the figure, never a comparison against the
+# reader's own floor or currency.
+_MIN_PLAUSIBLE_ANNUAL = 15_000.0
+
+# The exception: currencies whose ordinary annual salary is written as a much
+# bigger raw number because the unit itself is worth far less, so a flat
+# 15,000 would rarely fire for them at all. JPY and KRW have no meaningful
+# fractional unit and HUF, IDR, VND, CLP and ISK are quoted in the same
+# spirit; a JPY salary of 3-10 million a year is ordinary and a misparsed
+# monthly figure landing at, say, 300,000 would sail straight under a
+# GBP-shaped floor. This is a fact about how each currency is denominated,
+# published and stable, not a foreign-exchange rate, so unlike a currency
+# conversion it does not go stale and is not the guess `clears_floor`
+# refuses to make.
+_LARGE_NOTATION = frozenset({"JPY", "KRW", "HUF", "IDR", "VND", "CLP", "ISK"})
+_LARGE_NOTATION_MULT = 100.0
+
+
+def _implausible_annual(sal: Salary) -> bool:
+    """Too small to be a real year's pay, in whatever currency this is.
+
+    Uses `annualised()` so a day or hour rate is judged on what it actually
+    works out to a year, the same figure the floor itself compares against,
+    not on the bare number a rate is quoted in.
+    """
+    top = sal.annualised()
+    if top is None:
+        return False
+    floor = _MIN_PLAUSIBLE_ANNUAL
+    if (sal.currency or "").upper() in _LARGE_NOTATION:
+        floor *= _LARGE_NOTATION_MULT
+    return top < floor
+
+
 def parse_text(text: str | None, default_currency: str | None = None) -> Salary:
     """Best-effort parse of a free-text pay string.
 
@@ -548,10 +669,21 @@ def _scan(full: str, begin: int, stop: int, default_currency: str | None, *,
         # figure further down and report that as the salary.
         families.reverse()
 
+    # The first figure that parsed as pay-shaped in every other respect but
+    # failed the plausibility floor or the year-range check. Kept rather than
+    # thrown away so the caller sees "unconfirmed", never nothing: a bare
+    # `Salary()` and a rejected `£1,000` both show as "unconfirmed salary"
+    # to the reader, but only the second one is honest about what the advert
+    # actually said. Only the FIRST one is kept, matching every other gate in
+    # this loop, which moves on rather than trying to pick the "best" reject.
+    fallback: Salary | None = None
+
     for rng, single, rate in families:
         for m in rng.finditer(t):
             lo, hi = _to_float(m.group("lo")), _to_float(m.group("hi"))
             if lo is None or hi is None or hi < lo:
+                continue
+            if _looks_like_year_range(lo, hi):
                 continue
             if _is_bonus_figure(full, begin + m.start(), begin + m.end()):
                 continue
@@ -590,21 +722,43 @@ def _scan(full: str, begin: int, stop: int, default_currency: str | None, *,
                 mult, own_period = 1.0, False
             if own_period:
                 period = "year"
-            if period == "month" or (rate and period == "year" and mult == 1.0):
+            if period == "month" and _month_word_is_a_different_sentence(
+                    full, begin + m.start(), begin + m.end()):
+                period = chunk_period if rate or len(t) <= 400 else "year"
+            if period == "month":
+                # Annualise rather than storing the monthly number as the
+                # year's pay. Flo Health states "Salary Range - gross per
+                # month ... \u20ac9.000 \u2014 \u20ac11.000 EUR": `_period_near` reads
+                # "month" correctly from the words 50 characters away, well
+                # inside its 60-character window, but the old code `continue`d
+                # on that and threw the whole range away. The SINGLE loop
+                # then picked off the lone trailing "\u20ac11.000" on its own,
+                # whose OWN 60-character window no longer reaches back to
+                # "month", so it fell back to the chunk default of "year":
+                # EUR 108,000-132,000 a year read as EUR 11,000, confirmed,
+                # and dropped by any floor at all. Multiplying up here, on
+                # the range that still carries the period word, fixes both at
+                # once.
+                lo, hi = lo * 12.0, hi * 12.0
+                period = "year"
+            elif rate and period == "year" and mult == 1.0:
                 # The rate patterns exist only to read day and hour rates:
                 # their number is four digits at most, so believing one as an
                 # annual figure files a 13.45 an hour job as 13.45 a YEAR and
-                # then hides it behind any floor at all. A monthly figure has
-                # no period to be stored in, and reading it as annual is the
-                # same mistake twelve times over.
+                # then hides it behind any floor at all.
                 #
                 # A unit is the exception: "\u20b913-16 LPA" is caught by the RATE
                 # patterns, because thirteen is a rate-shaped number, and it
                 # is an annual salary of 1.3 million all the same.
                 continue
-            return Salary(min=lo * mult, max=hi * mult, currency=cur,
-                          period=period, raw=m.group(0).strip(),
-                          confirmed=True)
+            sal = Salary(min=lo * mult, max=hi * mult, currency=cur,
+                        period=period, raw=m.group(0).strip(), confirmed=True)
+            if _implausible_annual(sal):
+                if fallback is None:
+                    fallback = Salary(min=sal.min, max=sal.max, currency=sal.currency,
+                                      period=sal.period, raw=sal.raw, confirmed=False)
+                continue
+            return sal
 
         for m in single.finditer(t):
             v = _to_float(_match_value(m) or "")
@@ -626,13 +780,26 @@ def _scan(full: str, begin: int, stop: int, default_currency: str | None, *,
                 mult, own_period = 1.0, False
             if own_period:
                 period = "year"
-            if period == "month" or (rate and period == "year" and mult == 1.0):
+            if period == "month" and _month_word_is_a_different_sentence(
+                    full, begin + m.start(), begin + m.end()):
+                period = chunk_period if rate or len(t) <= 400 else "year"
+            if period == "month":
+                # Same reason as the range loop above: a monthly figure is
+                # annualised, not thrown away.
+                v = v * 12.0
+                period = "year"
+            elif rate and period == "year" and mult == 1.0:
                 continue
-            return Salary(min=v * mult, max=v * mult, currency=cur,
-                          period=period, raw=m.group(0).strip(),
-                          confirmed=True)
+            sal = Salary(min=v * mult, max=v * mult, currency=cur,
+                        period=period, raw=m.group(0).strip(), confirmed=True)
+            if _implausible_annual(sal):
+                if fallback is None:
+                    fallback = Salary(min=sal.min, max=sal.max, currency=sal.currency,
+                                      period=sal.period, raw=sal.raw, confirmed=False)
+                continue
+            return sal
 
-    return Salary()
+    return fallback if fallback is not None else Salary()
 
 
 def from_ashby(comp: dict | None) -> Salary:
