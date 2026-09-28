@@ -140,10 +140,17 @@ class SeedAgeComesFromTheShards(unittest.TestCase):
         self.assertEqual(item.state, "unknown")
 
     def test_shards_give_the_age(self):
+        # Sit the mtime well inside day 20 rather than exactly on its edge.
+        # `_seed_item` truncates with timedelta.days, so an mtime stored even a
+        # millisecond later than asked for reads as 19. Windows does round it
+        # later, and this test went red on windows-latest while every ubuntu
+        # job passed. CLAUDE.md already says not to assert on timings; this is
+        # the same trap one step removed, an assertion on a boundary a
+        # filesystem is allowed to move.
         d = Path(mkdtemp())
         p = d / "UK.jsonl.gz"
         p.write_bytes(b"x")
-        old = time.time() - 20 * 86400
+        old = time.time() - (20 * 86400 + 6 * 3600)
         import os
         os.utime(p, (old, old))
         item = freshness._seed_item(d)
