@@ -17,6 +17,7 @@ from __future__ import annotations
 import itertools
 import re
 import unicodedata
+from typing import Any, NamedTuple
 
 from . import employment
 from .config import Config
@@ -2343,6 +2344,108 @@ def merged_location(locations, cfg: Config | None = None) -> tuple[str, int]:
     return text, len(locs)
 
 
+class PayMember(NamedTuple):
+    """One posting in a company+title group, reduced to what the merge decides on.
+
+    `location` is that posting's OWN location, read before any joining, which
+    is the whole point of the type: once `merged_location` has run there is no
+    longer anything to attribute a pay figure to.
+    """
+
+    rank: tuple           # dedupe winner order, highest wins
+    location: str
+    pay: tuple            # from `pay_key`
+    item: Any             # the Job, or the database row
+
+
+def pay_key(currency, low, high, period) -> tuple:
+    """What a posting states about pay, as a value two postings compare on.
+
+    Takes the four fields rather than a `Salary` so that the scan-time pass and
+    the stored-row pass can ask the same question of a `Job` and of a sqlite
+    row. Those two passes disagreeing about what counts as the same job is
+    itself a bug this file has already shipped once: see `merged_location`.
+    """
+    return ((currency or "").strip().upper(), low, high,
+            (period or "year").strip().lower())
+
+
+def _states_pay(pay: tuple) -> bool:
+    """Whether a posting published a figure at all.
+
+    Reads the numbers, not `confirmed`. Most adverts state nothing, and the
+    absence is the normal case rather than a parse failure.
+    """
+    return pay[1] is not None or pay[2] is not None
+
+
+def pay_attributable_groups(members: list[PayMember]) -> list[list[Any]]:
+    """Split one company+title group so no survivor carries a pay figure that
+    was stated for somewhere the survivor is not open.
+
+    Kraken publishes every role on Ashby twice: once for the United States
+    with a band, and once for the twenty-one other countries it hires in with
+    none. Company and title are identical, so both merge passes collapsed the
+    pair onto the US posting, joined the other countries onto its location
+    line, and left its band sitting there. What came out was one row that
+    reads as a United Kingdom vacancy, links to the United States
+    application, and quotes a United States band. Nothing failed, no column
+    was empty, and the row renders exactly like a correct one, which is this
+    repo's signature shape.
+
+    The merge is still keyed on company plus title and that is still right,
+    for the reason `merged_location` and `store.merge_duplicates` both give:
+    an applicant tracking system publishing one posting per office is the
+    common case, and six rows for one job is worse than one. Only the pay is
+    wrong. So a posting folds into the winner when either
+
+      * it says the same thing about pay, which makes it a copy of the same
+        terms wherever it happens to be open, or
+      * every country it names is a country the winner's pay was stated for,
+        which is the one-posting-per-office case and covers an office that
+        states nothing sitting beside one that does,
+
+    and otherwise it keeps its own row, with its own location, its own URL and
+    its own pay. Both halves of that are needed: the first alone would split a
+    board that states a band in New York and none in Austin, the second alone
+    would split two postings quoting one identical band in two countries.
+
+    A posting naming no country this module can resolve, bare "Remote" being
+    the case that turns up, does not fold either. Unknown gets its own branch
+    here rather than being read as "same place": an extra row the reader can
+    see is recoverable, a silently foreign band is not.
+
+    A group where nobody states pay has nothing to cross and merges whole,
+    which is most groups, because most adverts state no salary.
+
+    Every split is decided before the caller mutates anything. The callers
+    overwrite the winner's `location` with the joined line, and a decision
+    taken after that would be reading the answer it had just destroyed.
+    """
+    out: list[list[Any]] = []
+    remaining = list(members)
+    while remaining:
+        best = max(remaining, key=lambda m: m.rank)
+        if not _states_pay(best.pay):
+            out.append([m.item for m in remaining])
+            return out
+        paid = _countries_in(best.location)
+        folded: list[Any] = []
+        rest: list[PayMember] = []
+        for m in remaining:
+            if m is best:
+                folded.append(m.item)
+                continue
+            mine = _countries_in(m.location)
+            if m.pay == best.pay or (mine and mine <= paid):
+                folded.append(m.item)
+            else:
+                rest.append(m)
+        out.append(folded)
+        remaining = rest
+    return out
+
+
 def dedupe(jobs: list[Job], cfg: Config | None = None) -> list[Job]:
     """Collapse the same role posted once per location, or once per source.
 
@@ -2362,22 +2465,39 @@ def dedupe(jobs: list[Job], cfg: Config | None = None) -> list[Job]:
                           []).append(j)
 
     out: list[Job] = []
-    for members in groups.values():
-        if len(members) == 1:
-            out.append(members[0])
-            continue
-        best = max(members, key=lambda x: (directness(x.platform),
-                                           x.salary.confirmed,
-                                           len(x.description or "")))
-        best.location, n_locs = merged_location(
-            [m.location or "" for m in members], cfg)
-        if len({m.platform for m in members}) > 1:
-            others = sorted({m.platform for m in members} - {best.platform})
-            best.flags.append("also listed on " + ", ".join(others))
-        if len({(m.location or "").lower() for m in members}) > 1:
-            best.flags.append(f"posted in {n_locs} locations")
-        out.append(best)
+    for group in groups.values():
+        # A company+title group is not always one posting. Where the copies
+        # disagree about pay and about which country they are open in, they are
+        # separate vacancies on separate terms, and collapsing them put a US
+        # band on a UK row. `pay_attributable_groups` says which of them may
+        # safely share a row.
+        for members in pay_attributable_groups(_pay_members(group)):
+            if len(members) == 1:
+                out.append(members[0])
+                continue
+            best = max(members, key=lambda x: (directness(x.platform),
+                                               x.salary.confirmed,
+                                               len(x.description or "")))
+            best.location, n_locs = merged_location(
+                [m.location or "" for m in members], cfg)
+            if len({m.platform for m in members}) > 1:
+                others = sorted({m.platform for m in members} - {best.platform})
+                best.flags.append("also listed on " + ", ".join(others))
+            if len({(m.location or "").lower() for m in members}) > 1:
+                best.flags.append(f"posted in {n_locs} locations")
+            out.append(best)
     return _fold_aggregators(out)
+
+
+def _pay_members(jobs: list[Job]) -> list[PayMember]:
+    """`PayMember` for each posting, ranked the way `dedupe` picks its winner."""
+    return [PayMember(rank=(directness(j.platform), j.salary.confirmed,
+                            len(j.description or "")),
+                      location=j.location or "",
+                      pay=pay_key(j.salary.currency, j.salary.min,
+                                  j.salary.max, j.salary.period),
+                      item=j)
+            for j in jobs]
 
 
 def _fold_aggregators(jobs: list[Job]) -> list[Job]:

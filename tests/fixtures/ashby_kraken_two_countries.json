@@ -1,0 +1,138 @@
+{
+  "jobs": [
+    {
+      "id": "95771a6e-726d-4ee0-9775-92fd30ae9250",
+      "title": "Engineering Manager – Growth Foundations",
+      "department": "Marketing",
+      "team": "Marketing",
+      "employmentType": "FullTime",
+      "location": "United States",
+      "shouldDisplayCompensationOnJobPostings": true,
+      "secondaryLocations": [],
+      "publishedAt": "2026-09-18T17:04:36.139+00:00",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": {
+        "postalAddress": {
+          "addressCountry": "United States"
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/kraken.com/95771a6e-726d-4ee0-9775-92fd30ae9250",
+      "applyUrl": "https://jobs.ashbyhq.com/kraken.com/95771a6e-726d-4ee0-9775-92fd30ae9250/application",
+      "descriptionHtml": "<h1><strong>Building the Future of Open Finance</strong><br /></h1>",
+      "compensation": {
+        "compensationTierSummary": "$110.4K – $220.8K • Offers Equity • Offers Bonus",
+        "scrapeableCompensationSalarySummary": "$110.4K - $220.8K",
+        "compensationTiers": [
+          {
+            "id": "e80a91a7-6926-4bb4-a1f8-1172e6c90c1e",
+            "tierSummary": "Estimated Base Salary $110.4K – $220.8K • Offers Equity • Offers Bonus",
+            "title": null,
+            "additionalInformation": null,
+            "components": [
+              {
+                "id": "e38402d6-719a-4154-9fb9-b88536d86044",
+                "summary": "Estimated Base Salary $110.4K – $220.8K",
+                "compensationType": "Salary",
+                "interval": "1 YEAR",
+                "currencyCode": "USD",
+                "minValue": 110400,
+                "maxValue": 220800
+              },
+              {
+                "id": "3726d048-8e1d-4778-95c2-5a0dadac4f0b",
+                "summary": "Offers Equity",
+                "compensationType": "EquityPercentage",
+                "interval": "NONE",
+                "currencyCode": null,
+                "minValue": null,
+                "maxValue": null
+              },
+              {
+                "id": "4ee0edb0-b8de-421a-8ffb-318ba8f418aa",
+                "summary": "Offers Bonus",
+                "compensationType": "Bonus",
+                "interval": "1 YEAR",
+                "currencyCode": "USD",
+                "minValue": null,
+                "maxValue": null
+              }
+            ]
+          }
+        ],
+        "summaryComponents": [
+          {
+            "compensationType": "Salary",
+            "interval": "1 YEAR",
+            "currencyCode": "USD",
+            "minValue": 110400,
+            "maxValue": 220800
+          },
+          {
+            "compensationType": "EquityPercentage",
+            "interval": "NONE",
+            "currencyCode": null,
+            "minValue": null,
+            "maxValue": null
+          },
+          {
+            "compensationType": "Bonus",
+            "interval": "1 YEAR",
+            "currencyCode": "USD",
+            "minValue": null,
+            "maxValue": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "54d595d9-61b9-4446-9713-1378d3714d36",
+      "title": "Engineering Manager – Growth Foundations",
+      "department": "Marketing",
+      "team": "Marketing",
+      "employmentType": "FullTime",
+      "location": "United Kingdom",
+      "shouldDisplayCompensationOnJobPostings": false,
+      "secondaryLocations": [
+        {
+          "location": "Brazil",
+          "address": {
+            "postalAddress": {
+              "addressCountry": "Brazil"
+            }
+          }
+        },
+        {
+          "location": "United Arab Emirates",
+          "address": {
+            "postalAddress": {
+              "addressCountry": "United Arab Emirates"
+            }
+          }
+        }
+      ],
+      "publishedAt": "2026-09-18T17:04:33.866+00:00",
+      "isListed": true,
+      "isRemote": true,
+      "workplaceType": "Remote",
+      "address": {
+        "postalAddress": {
+          "addressRegion": "United Kingdom",
+          "addressCountry": "United Kingdom",
+          "addressLocality": "London"
+        }
+      },
+      "jobUrl": "https://jobs.ashbyhq.com/kraken.com/54d595d9-61b9-4446-9713-1378d3714d36",
+      "applyUrl": "https://jobs.ashbyhq.com/kraken.com/54d595d9-61b9-4446-9713-1378d3714d36/application",
+      "descriptionHtml": "<h1><strong>Building the Future of Open Finance</strong><br /></h1>",
+      "compensation": {
+        "compensationTierSummary": null,
+        "scrapeableCompensationSalarySummary": null,
+        "compensationTiers": [],
+        "summaryComponents": []
+      }
+    }
+  ],
+  "apiVersion": "1"
+}
