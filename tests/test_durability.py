@@ -447,9 +447,12 @@ def test_a_docx_written_normally_is_still_a_valid_zip():
     docx.markdown_to_docx(DOC_MD, p)
     z = zipfile.ZipFile(p)
     assert z.testzip() is None
-    assert set(z.namelist()) == {
+    # The five document parts must all be there. docProps/ is allowed on top:
+    # it is the author and title, tested in test_docx_properties.py, and an
+    # exact-set check here turned adding it into a durability failure.
+    assert {
         "[Content_Types].xml", "_rels/.rels", "word/_rels/document.xml.rels",
-        "word/styles.xml", "word/document.xml"}
+        "word/styles.xml", "word/document.xml"} <= set(z.namelist())
 
 
 # ------------------------------------------------------------- the outputs

@@ -14,6 +14,7 @@ from __future__ import annotations
 import io
 import re
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 from xml.sax.saxutils import escape
 
@@ -27,6 +28,22 @@ _CT = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
 </Types>"""
 
+# The two property parts are registered only when they are written. A part in
+# the zip with no Override and no Relationship is invisible: Word and
+# LibreOffice read the package through its relationships, not by listing the
+# files, so the file looks right and the metadata never arrives.
+_CT_PROPS = (
+    '<Override PartName="/docProps/core.xml" ContentType="application/vnd.'
+    'openxmlformats-package.core-properties+xml"/>\n'
+    '<Override PartName="/docProps/app.xml" ContentType="application/vnd.'
+    'openxmlformats-officedocument.extended-properties+xml"/>\n')
+
+_RELS_PROPS = (
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/'
+    '2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>\n'
+    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/'
+    '2006/relationships/extended-properties" Target="docProps/app.xml"/>\n')
+
 _RELS = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
@@ -36,6 +53,65 @@ _DOC_RELS = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
 <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>"""
+
+_APP = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">
+<DocSecurity>0</DocSecurity>
+</Properties>"""
+
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+
+def _owner(md: str) -> str:
+    """The name on the first `# ` line, or "" if the document has none.
+
+    The candidate's own name is already in the document, so this needs no
+    config and works for every user of the repo. "" is a real answer: a
+    document with no name gets no properties at all, because the alternative
+    is inventing an author, and a made-up one is worse than a blank.
+    """
+    for raw in md.splitlines():
+        if raw.startswith("# "):
+            # Bold markers are markup, not part of anybody's name; control
+            # characters are not legal XML and would make the part unreadable.
+            name = raw[2:].replace("**", "")
+            return _CONTROL.sub("", name).strip()
+    return ""
+
+
+def _core(name: str) -> str:
+    """docProps/core.xml: who made the document, and when.
+
+    LibreOffice carries these straight into the PDF's XMP, and the PDF is the
+    only file a recruiter ever receives. Without them the PDF had no author
+    and no title, which is the one thing every other CV they open does have,
+    and recruiters have been told to look at file properties.
+
+    The title is the name alone, not "name CV": the same writer also produces
+    cover letters, and a letter titled "CV" would be wrong in exactly the
+    place somebody is checking for things that are wrong.
+
+    Both timestamps are the real time of writing and are the same value,
+    because this is a document made once. They are never offset or backdated;
+    a document dated to look older than it is would be the very deception
+    this metadata exists to avoid being mistaken for.
+    """
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    n = escape(name)
+    return (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+        '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/'
+        '2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" '
+        'xmlns:dcterms="http://purl.org/dc/terms/" '
+        'xmlns:dcmitype="http://purl.org/dc/dcmitype/" '
+        'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">\n'
+        f'<dc:title>{n}</dc:title>\n'
+        f'<dc:creator>{n}</dc:creator>\n'
+        f'<cp:lastModifiedBy>{n}</cp:lastModifiedBy>\n'
+        f'<dcterms:created xsi:type="dcterms:W3CDTF">{now}</dcterms:created>\n'
+        f'<dcterms:modified xsi:type="dcterms:W3CDTF">{now}</dcterms:modified>\n'
+        '</cp:coreProperties>')
+
 
 _W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
 
@@ -172,10 +248,18 @@ def markdown_to_docx(md: str, out_path: Path) -> Path:
     # used to be. These documents are one per application and regenerating one
     # costs a model call, so the old version is worth keeping. A CV is a few
     # kilobytes, so holding it in memory costs nothing.
+    name = _owner(md)
+    ct, rels = _CT, _RELS
+    if name:
+        ct = _CT.replace("</Types>", _CT_PROPS + "</Types>")
+        rels = _RELS.replace("</Relationships>", _RELS_PROPS + "</Relationships>")
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("[Content_Types].xml", _CT)
-        z.writestr("_rels/.rels", _RELS)
+        z.writestr("[Content_Types].xml", ct)
+        z.writestr("_rels/.rels", rels)
+        if name:
+            z.writestr("docProps/core.xml", _core(name))
+            z.writestr("docProps/app.xml", _APP)
         z.writestr("word/_rels/document.xml.rels", _DOC_RELS)
         z.writestr("word/styles.xml", _STYLES)
         z.writestr("word/document.xml", doc)
