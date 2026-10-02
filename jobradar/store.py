@@ -48,10 +48,25 @@ CREATE TABLE IF NOT EXISTS roles (
   flags TEXT DEFAULT '[]',
   first_seen TEXT NOT NULL,
   first_run INTEGER DEFAULT 0,
-  last_seen TEXT NOT NULL
+  last_seen TEXT NOT NULL,
+  -- Which configured source this role was read from, as `Source.key`.
+  --
+  -- Empty means "nothing here can say", and that is a real answer rather than
+  -- a gap to be guessed at: `migrate` imported the old seen-set, `seed load`
+  -- imports shards built on another machine, and an assistant's job-search
+  -- connector is not a source in this list at all. A role with no source_key
+  -- can never be closed from absence, because there is no read of anything
+  -- whose outcome would be evidence about it. See `closure.py`.
+  source_key TEXT DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_roles_last_seen ON roles(last_seen);
 CREATE INDEX IF NOT EXISTS idx_roles_company ON roles(company);
+-- The index on `source_key` is NOT here. This whole script runs on every
+-- connect, including against a database made before that column existed,
+-- where `CREATE TABLE IF NOT EXISTS roles` is a no-op and the index then
+-- refuses with "no such column: source_key" -- which is every command on
+-- that database refusing to open it. It is created in `_ensure_columns`,
+-- after the ALTER that adds the column. Found by running it.
 
 CREATE TABLE IF NOT EXISTS role_state (
   uid TEXT PRIMARY KEY REFERENCES roles(uid) ON DELETE CASCADE,
@@ -86,6 +101,40 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs(state);
 
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
+
+-- What happened when each source was read, per run.
+--
+-- The table that makes "this role is gone" sayable. Without it the only
+-- absence signal in the tool is a role missing from a scan, and a role is
+-- missing from a scan for every reason under the sun: the board 403'd, the
+-- host was still inside a 23 hour block, the run was a `--limit` stride that
+-- never asked, the pager stopped at its page cap, the API changed shape and
+-- the parser raised. Closing roles on that signal would report a clean
+-- confident "47 roles closed" with nothing true in it, which is this
+-- repository's signature defect.
+--
+-- `ok` is deliberately not "the request returned". It is 1 only when the
+-- payload PARSED into the shape its platform's adapter expects: a board
+-- answering HTTP 200 with a holding page, a login wall or a vendor error
+-- page is unread, exactly as `validate` and `adapters.parse` already treat
+-- it. `complete` is 0 when the fetcher says it stopped at its own page cap,
+-- because the first 60 of 200 postings cannot say a posting is absent.
+-- `keyword` is 1 for an expanded keyword search, which answers for the terms
+-- it was given rather than for an employer's whole board.
+CREATE TABLE IF NOT EXISTS source_reads (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_key TEXT NOT NULL,
+  run INTEGER NOT NULL DEFAULT 0,
+  read_on TEXT NOT NULL,
+  ok INTEGER NOT NULL DEFAULT 0,
+  roles INTEGER NOT NULL DEFAULT 0,
+  complete INTEGER NOT NULL DEFAULT 1,
+  keyword INTEGER NOT NULL DEFAULT 0,
+  platform TEXT DEFAULT '',
+  why TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_source_reads_key
+  ON source_reads(source_key, read_on);
 """
 
 # Terminal states: these roles stop appearing in results.
@@ -311,6 +360,20 @@ def _ensure_columns(con) -> None:
     if "employment" not in cols:
         _try_alter(con,
                    "ALTER TABLE roles ADD COLUMN employment TEXT DEFAULT 'unstated'")
+    # Which source each role came from. Existing rows arrive empty, which is
+    # the truthful answer for a row nothing recorded a source for, and an
+    # empty one is never auto-closed. `closure.backfill_source_keys` fills in
+    # what can be derived from the source list and deliberately leaves the
+    # rest alone: a wrong attribution here closes a live role on another
+    # board's evidence.
+    if "source_key" not in cols:
+        _try_alter(con, "ALTER TABLE roles ADD COLUMN source_key TEXT DEFAULT ''")
+    # Outside the `if`, and not in `SCHEMA`: see the note there. The column is
+    # guaranteed by the line above on an old database and by the CREATE TABLE
+    # on a new one, so by here it always exists and the index can be asked for
+    # unconditionally.
+    con.execute("CREATE INDEX IF NOT EXISTS idx_roles_source_key "
+                "ON roles(source_key)")
     acols = {r["name"] for r in con.execute("PRAGMA table_info(artifacts)")}
     if "body" not in acols:
         _try_alter(con, "ALTER TABLE artifacts ADD COLUMN body TEXT DEFAULT ''")
@@ -433,7 +496,103 @@ def upsert_roles(con, jobs: Iterable, run: int | None = None,
         emp = getattr(j, "employment", "") or ""
         if emp and emp != "unstated":
             con.execute("UPDATE roles SET employment=? WHERE uid=?", (emp, j.uid))
+        # Which source this role was read from, written the same way and for
+        # the same reason as `employment` above rather than threaded through
+        # that positional tuple.
+        #
+        # Empty never overwrites a value that is there, the guard `sector`,
+        # `country` and `employment` all carry: `seed load` and `migrate`
+        # write rows with no source attached, and blanking the key would make
+        # a role that CAN be reasoned about into one that cannot, silently.
+        # Every adapter sets `source_id` from `Source.key`, so a scanned role
+        # always has one.
+        src_key = getattr(j, "source_id", "") or ""
+        if src_key:
+            con.execute("UPDATE roles SET source_key=? WHERE uid=?",
+                        (src_key, j.uid))
     return new, seen
+
+
+def touch_seen(con, uids: Iterable[str], when: str | None = None) -> int:
+    """Record that a source still lists these roles. Returns rows touched.
+
+    `last_seen` has to mean "a source that lists this role was read, and
+    listed it", or absence from a read cannot be evidence of anything.
+    `upsert_roles` alone cannot give it that meaning: a scan stores only the
+    postings that got through screening, so a stored role whose title stops
+    matching an edited config, or whose salary drops below a raised floor, is
+    parsed off its board every single run and never written. Its `last_seen`
+    then ages exactly like a role that was taken down, and a closure sweep
+    reading that would mark live vacancies closed because the READER changed
+    their mind about them.
+
+    So every parsed posting touches its row, screened or not. Nothing is
+    inserted: a posting the config does not want is not a role to add, it is
+    a row that already exists and is still on the board.
+
+    Never moves a date backwards. A resumed scan and a seed load both write
+    dates that may be older than the newest reading, and `last_seen` going
+    down would hand a role back its staleness.
+    """
+    day = when or date.today().isoformat()
+    ids = [u for u in dict.fromkeys(uids) if u]
+    n = 0
+    for i in range(0, len(ids), 400):
+        chunk = ids[i:i + 400]
+        q = ",".join("?" * len(chunk))
+        n += con.execute(
+            f"UPDATE roles SET last_seen=? WHERE uid IN ({q}) AND last_seen<?",
+            (day, *chunk, day)).rowcount
+    return n
+
+
+# ------------------------------------------------------- source read log
+
+def record_source_read(con, source_key: str, *, run: int = 0, ok: bool,
+                       roles: int = 0, complete: bool = True,
+                       keyword: bool = False, platform: str = "",
+                       why: str = "", when: str | None = None) -> None:
+    """Write down what happened when one source was read.
+
+    One row per source per call. `ok` must only be True when the payload
+    parsed into the shape the adapter expects -- see `adapters.parse_or_why`,
+    which is the one place that can tell. Everything else about this row is
+    for a person reading the log afterwards; `closure.py` reads `ok`,
+    `complete`, `keyword`, `roles` and `read_on` and nothing else.
+    """
+    if not source_key:
+        return
+    con.execute(
+        "INSERT INTO source_reads (source_key,run,read_on,ok,roles,complete,"
+        "keyword,platform,why) VALUES (?,?,?,?,?,?,?,?,?)",
+        (source_key, int(run or 0), when or date.today().isoformat(),
+         1 if ok else 0, int(roles or 0), 1 if complete else 0,
+         1 if keyword else 0, platform or "", (why or "")[:200]))
+
+
+# How many days of read history to keep.
+#
+# Closure needs only a handful of readings after a role's `last_seen`, and
+# every scan writes one row per source: on the bundled list that is 17,810
+# rows a run, so an unpruned log is the largest table in the database inside a
+# fortnight and the slowest thing in the closure query. 60 days is four times
+# `LIVE_WINDOW_DAYS` and leaves the evidence for anything recent enough to
+# still be on the board.
+READ_LOG_DAYS = 60
+
+
+def prune_source_reads(con, days: int = READ_LOG_DAYS) -> int:
+    """Drop read records older than `days`. Returns rows removed."""
+    return con.execute(
+        "DELETE FROM source_reads WHERE read_on < date('now', ?)",
+        (f"-{int(days)} days",)).rowcount
+
+
+def status_of(con, uid: str) -> str:
+    """One role's status, 'new' when nothing has been recorded."""
+    r = con.execute("SELECT status FROM role_state WHERE uid=?",
+                    (uid,)).fetchone()
+    return r["status"] if r else "new"
 
 
 # How long a role stays on the board after a scan last saw it.

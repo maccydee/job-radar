@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 
 import yaml
 
-from . import adapters, output, progress as progress_mod, sources as src_mod
+from . import adapters, closure, output, progress as progress_mod, sources as src_mod
 from . import source_update
 import webbrowser
 
@@ -237,6 +237,38 @@ def _flush_phase(con, cfg, jobs, args, run=None, on_stored=None) -> int:
         return 0
 
 
+def _record_reads(con, reads: dict, seen_uids: set, *, run: int) -> None:
+    """Write down what each source said, and that these roles are still listed.
+
+    Last, and in one place, because a half-written read log is worse than
+    none: a source recorded as successfully read when the run that read it
+    never finished is a false confirmation, and a false confirmation is what
+    closes a live role. A killed scan therefore records nothing and closes
+    nothing, which is the right way round.
+
+    After `upsert_roles`, so the filter below sees this run's own roles.
+
+    Only sources this database holds a role from. A read is kept to answer one
+    question -- "was this role on the board when it was last read" -- and for
+    a source no stored role came from there is no such question: the row
+    could never be evidence about anything. Measured on the bundled list it
+    is the difference between 17,810 rows a run and about 1,000, which over
+    the retention window is 190MB of database against 6MB. The cost is that
+    the log is not a record of every board's health; `validate` and the scan's
+    own output are, and both existed first.
+    """
+    from . import store
+    if seen_uids:
+        store.touch_seen(con, seen_uids)
+        seen_uids.clear()
+    held = {r["source_key"] for r in con.execute(
+        "SELECT DISTINCT source_key FROM roles WHERE COALESCE(source_key,'') <> ''")}
+    for key, r in reads.items():
+        if key in held:
+            store.record_source_read(con, key, run=run, **r)
+    store.prune_source_reads(con)
+
+
 def cmd_scan(args) -> int:
     cfg = load_cfg(args.config)
     # First, and before a single request. See `out_dir_problem`: this is the
@@ -357,6 +389,20 @@ def cmd_scan(args) -> int:
     counts: dict[str, int] = {}
     absorbed: set = set()
     ok = 0
+    # What happened when each source was read, keyed on the source so it
+    # cannot be recorded twice. Written to `source_reads` at the end of the
+    # scan, and it is the ONLY thing that makes a role's absence mean
+    # anything: see `closure.py`. Keyed rather than appended for the same
+    # reason `absorbed` exists -- `absorb` runs from two places.
+    reads: dict[str, dict] = {}
+    # Every posting this scan saw on a board, screened or not.
+    #
+    # `upsert_roles` only ever writes what got through screening, so a stored
+    # role whose title stops matching an edited config is read off its board
+    # every run and never written, and its `last_seen` ages exactly like a
+    # role that was taken down. A closure sweep reading that would close live
+    # vacancies because the READER changed their mind. See `store.touch_seen`.
+    seen_uids: set = set()
 
     def absorb(res):
         """Turn one fetched source into jobs. Called at most once per result.
@@ -368,11 +414,38 @@ def cmd_scan(args) -> int:
         is the shape of bug this file keeps finding.
         """
         nonlocal ok
-        if id(res) in absorbed or not res.ok:
+        if id(res) in absorbed:
             return
         absorbed.add(id(res))
+        if not res.ok:
+            # Recorded, and recorded as a FAILURE. A board that refused, timed
+            # out, 403'd or answered 429 has told us nothing about any of its
+            # postings, and the only thing that stops a closure sweep reading
+            # that silence as "these jobs are gone" is this row saying the
+            # read did not happen.
+            reads[res.source.key] = {
+                "ok": False, "roles": 0, "complete": not res.truncated,
+                "keyword": bool(res.source.keyword_template),
+                "platform": res.source.platform or "",
+                "why": (res.transport or res.error or "no payload")[:200]}
+            return
         ok += 1
-        jobs = adapters.parse(res.payload, res.source)
+        # `parse_or_why`, not `parse`. The empty list a malformed board
+        # produces is indistinguishable from an employer with no vacancies,
+        # and the whole of `closure.py` rests on telling those apart.
+        jobs, why = adapters.parse_or_why(res.payload, res.source)
+        reads[res.source.key] = {
+            "ok": not why, "roles": len(jobs),
+            # A pager that stopped at its own cap has not seen the whole
+            # board, so it cannot say a posting is not on it.
+            "complete": not res.truncated,
+            "keyword": bool(res.source.keyword_template),
+            "platform": res.source.platform or "", "why": why}
+        # Before screening, deliberately. "This board still lists this role"
+        # is a fact about the board; whether the role matches this config is a
+        # fact about the reader, and conflating them is what made a config
+        # edit look like a withdrawn vacancy.
+        seen_uids.update(j.uid for j in jobs)
         for j in jobs:
             j.sector = j.sector or res.source.sector
             # The posting's own location beats the board's tag. A board is
@@ -471,6 +544,14 @@ def cmd_scan(args) -> int:
         # on every future caller remembering.
         if args.dry_run:
             return
+        # Everything this scan has seen on a board, whether or not screening
+        # wanted it. Flushed here rather than only at the end so a scan killed
+        # in its last pass -- which is fifty minutes long -- does not lose the
+        # fact that a thousand roles are still listed and leave them ageing
+        # towards a closure they do not deserve.
+        if seen_uids:
+            store.touch_seen(con, seen_uids)
+            seen_uids.clear()
         fresh = all_jobs[flushed_upto:]
         if not fresh:
             progress.commit()
@@ -817,6 +898,8 @@ def cmd_scan(args) -> int:
         store.upsert_roles(con, kept, run=this_run)
         new_ids = store.new_since_last_run(
             con, [j.uid for j in kept], run=this_run)
+        _record_reads(con, reads, seen_uids, run=this_run)
+        _say_closures(closure.close_absent(con))
 
     settled = store.settled_uids(con)
     hidden = [j for j in kept if j.uid in settled]
@@ -2665,6 +2748,68 @@ def cmd_rescreen(args) -> int:
         con.close()
 
 
+# ------------------------------------------------------------ closures
+def _say_closures(out: dict) -> None:
+    """Say what a closure sweep did, and what it refused to decide.
+
+    Both halves, always. A sweep that reports only what it closed is the
+    "Prune 2 dead source(s)" pull request again: the number is true and it is
+    not the interesting number. On this database the set it declines to decide
+    about is over a thousand roles, and leaving that unsaid turns "0 closed"
+    into an implied "nothing has gone".
+    """
+    closed = out["closed"]
+    done = "marked closed" if out.get("applied", True) else "WOULD be closed"
+    if closed:
+        _say(f"  {len(closed)} role(s) {done}, each absent from "
+             f"{closure.MIN_CONFIRMATIONS} or more successful reads of the "
+             f"source it came from.")
+        if out["was_interested"]:
+            _say(f"    {len(out['was_interested'])} of those you had marked "
+                 f"interested. Anything applied to, rejected, withdrawn or "
+                 f"skipped was left exactly as it was.")
+    kept = out["withheld"]
+    if kept:
+        _say(f"  {len(kept)} stale role(s) left alone, because nothing here "
+             f"can say they are gone: {out['withheld_unread']} whose source "
+             f"has not been read successfully since, {out['withheld_empty']} "
+             f"whose source answered with no postings at all. Those are "
+             f"UNKNOWN rather than open or closed.")
+
+
+def cmd_closures(args) -> int:
+    """Close roles their own board has stopped listing, on evidence."""
+    from . import store
+    con = store.connect(args.db, must_exist=True)
+    try:
+        if args.backfill:
+            cfg = load_cfg(args.config)
+            srcs = _load_sources(cfg)
+            got = closure.backfill_source_keys(con, srcs)
+            _say(f"  source_key: filled {got['filled']:,} of "
+                 f"{got['looked_at']:,} rows that had none. "
+                 f"{got['ambiguous']:,} matched more than one source and "
+                 f"{got['unmatched']:,} matched none; both are left empty, "
+                 f"and an empty one is never closed.")
+        cands = closure.candidates(con)
+        for c in cands[:40]:
+            _say(f"  CLOSE  {c['company']}: {c['title']}")
+            _say(f"         last listed {c['last_seen']}, absent from "
+                 f"{c['confirmations']} successful reads of its source, the "
+                 f"last on {c['last_read']}")
+        if len(cands) > 40:
+            _say(f"  and {len(cands) - 40} more")
+        out = closure.close_absent(con, apply=args.apply)
+        if not out["closed"]:
+            _say("  Nothing has enough evidence to close.")
+        _say_closures(out)
+        if not args.apply and out["closed"]:
+            _say("  `job-radar closures --apply` writes it.")
+        return 0
+    finally:
+        con.close()
+
+
 # ---------------------------------------------------------------- list
 def cmd_list(args) -> int:
     """Everything the dashboard shows, as text."""
@@ -2677,7 +2822,13 @@ def cmd_list(args) -> int:
     con = store.connect(args.db, must_exist=True)
     try:
         q = ("SELECT r.*, COALESCE(s.status,'new') status, "
-             "COALESCE(s.note,'') note FROM roles r "
+             "COALESCE(s.note,'') note, "
+             # Listed, absent or unknown. The text view has to carry this for
+             # the same reason the page does, and more so: it has no fourteen
+             # day window, so it is the only view that shows a role whose
+             # board stopped answering a month ago at all.
+             + closure.STATE_SQL + " AS source_state "
+             "FROM roles r "
              "LEFT JOIN role_state s ON s.uid=r.uid")
         params = []
         if args.status and args.status not in store.STATUSES:
@@ -2751,6 +2902,14 @@ def cmd_list(args) -> int:
             _say(f"{r['score']:>5.0f}  {r['title'][:52]:<52} {r['company'][:22]:<22}"
                  f"  {r['salary_label'] or 'unconfirmed':<20}{status}")
             _say(f"       {r['uid']}  {r['location'][:60]}")
+            if r["source_state"] == "unknown":
+                _say(f"       last listed {r['last_seen']}; its source has "
+                     f"not been read successfully since, so whether this is "
+                     f"still open is unknown")
+            elif r["source_state"] == "absent":
+                _say(f"       last listed {r['last_seen']}; its source has "
+                     f"been read since without it, so it looks no longer "
+                     f"listed")
             if r["note"]:
                 _say(f"       note: {r['note']}")
             if docs:
@@ -3066,6 +3225,25 @@ def build_parser() -> argparse.ArgumentParser:
     rs.add_argument("--limit", type=_limit, default=0, help="how many to list")
     rs.add_argument("--db", default=None, help=_DB_HELP)
     rs.set_defaults(func=cmd_rescreen)
+
+    cl = sub.add_parser("closures",
+                        help="close roles their own board has stopped listing")
+    # Reporting is the default and writing is the flag, the way `validate`
+    # reports and `validate --prune` writes. This moves roles to a terminal
+    # state on an argument from evidence, and an argument nobody can read
+    # before it is acted on is not an argument.
+    cl.add_argument("--apply", action="store_true",
+                    help="write the closures. Without it this says what it "
+                         "would close and why, and changes nothing.")
+    cl.add_argument("--backfill", action="store_true",
+                    help="first attribute stored roles to a configured "
+                         "source, where that is unambiguous. Rows it cannot "
+                         "place are left empty and are never closed.")
+    # `--config` is the global `-c`: the backfill needs the source list, and
+    # a second spelling of the same flag on one subcommand is how a reader
+    # ends up passing it to the wrong half of the parser.
+    cl.add_argument("--db", default=None, help=_DB_HELP)
+    cl.set_defaults(func=cmd_closures)
 
     ls = sub.add_parser("list", help="the dashboard, as text")
     ls.add_argument("--status", default=None,

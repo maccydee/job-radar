@@ -363,6 +363,38 @@ Matching is by URL when you give one. Otherwise it uses the company name and a
 loose title match, so an entry you typed by hand still finds the posting when
 the wording differs. Giving only `org` mutes a whole company.
 
+### Roles the board has taken down
+
+`closed` is also set for you, but only on evidence. A scan writes down which
+sources it read and whether each payload actually parsed, and a role is moved
+to `closed` when the source it came from has been read successfully more than
+once since the role was last listed, returned postings each time, and did not
+include it.
+
+```bash
+job-radar closures                      # what it would close, and why
+job-radar closures --apply              # write it
+job-radar closures --backfill --apply   # place older roles on a source first
+```
+
+A scan does this itself at the end of the run, so the command is for looking
+at the argument before it is acted on.
+
+What it will not do is treat absence from a scan as absence from a board. A
+board that refused, timed out, answered 429, changed the shape of its JSON, or
+simply was not read in a `--limit` run has said nothing about any of its
+postings, and a role whose source is in that state is **unknown**: neither
+confirmed open nor closed, labelled as such on the dashboard and by
+`job-radar list`, and left alone. Three states, because two of them would
+mean reading "we cannot say" as "no". Roles imported from a seed or from an
+older version carry no source, and nothing can be concluded about those
+either; `--backfill` attributes the ones it can place unambiguously and leaves
+the rest.
+
+A status you set yourself is never overwritten. `applied`, `submitted`,
+`interviewing`, `offer`, `rejected`, `withdrawn` and `skipped` are all left
+exactly as they are; only `new` and `interested` are closed automatically.
+
 ---
 
 ## Configuration

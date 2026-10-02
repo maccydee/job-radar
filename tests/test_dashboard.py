@@ -529,12 +529,21 @@ def test_a_limited_scan_says_so_on_the_first_run_too():
         limit = 0
 
     real_fetch, real_parse = cli.fetch_all, cli.adapters.parse
+    real_why = cli.adapters.parse_or_why
     cli.fetch_all = lambda srcs, **kw: [Result(source=s, payload=b"[]")
                                         for s in srcs]
-    cli.adapters.parse = lambda payload, src: [
-        Job(company=src.company, title="Engineering Manager",
-            url=f"https://x.invalid/{src.company}", platform="greenhouse",
-            location="London")]
+
+    def _parse(payload, src):
+        return [Job(company=src.company, title="Engineering Manager",
+                    url=f"https://x.invalid/{src.company}",
+                    platform="greenhouse", location="London")]
+
+    cli.adapters.parse = _parse
+    # `cmd_scan` calls `parse_or_why`: an empty list from `parse` is a board
+    # with no vacancies AND a board whose response could not be read, and
+    # closure detection has to tell those apart. Stubbing only `parse` left
+    # this test running the real greenhouse parser over `b"[]"`.
+    cli.adapters.parse_or_why = lambda payload, src: (_parse(payload, src), "")
     try:
         # Limited: the note appears even though this is run one.
         _Args.limit = 2
@@ -563,6 +572,7 @@ def test_a_limited_scan_says_so_on_the_first_run_too():
         assert "were read" not in out.getvalue(), out.getvalue()
     finally:
         cli.fetch_all, cli.adapters.parse = real_fetch, real_parse
+        cli.adapters.parse_or_why = real_why
 
 
 def test_a_role_with_no_link_is_history_and_not_a_listing():

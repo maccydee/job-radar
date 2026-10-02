@@ -13,7 +13,7 @@ from urllib.parse import quote
 from collections import Counter
 from datetime import datetime
 
-from .. import employment, store
+from .. import closure, employment, store
 from .favicon import link_tag as _favicon_tag, mark as _favicon_mark
 from .markdown import to_html as _md
 
@@ -1073,7 +1073,8 @@ def _rows(con):
     limited run emptied the board.
     """
     return con.execute("""
-        SELECT r.*, COALESCE(s.status,'new') AS status, COALESCE(s.note,'') AS note
+        SELECT r.*, COALESCE(s.status,'new') AS status, COALESCE(s.note,'') AS note,
+               """ + closure.STATE_SQL + """ AS source_state
         FROM roles r LEFT JOIN role_state s ON s.uid = r.uid
         WHERE """ + store.LIVE_SQL + " AND " + store.ACTIONABLE_SQL + """
            OR COALESCE(s.status,'new') <> 'new'
@@ -1418,6 +1419,39 @@ def _emp(row) -> str:
     return v if v in employment.VALUES else employment.UNSTATED
 
 
+# What the page says about a role whose current state is not known.
+#
+# Three states, because two are a lie. A role confirmed on this morning's read
+# and a role whose board has been refusing for three weeks were the same row
+# with the same Apply button: `last_seen` was written every scan and read by
+# nothing, so "we cannot say" rendered as "yes". That is the fault CLAUDE.md
+# records three instances of, pointed the other way.
+#
+# Worded as what is KNOWN rather than as a verdict. "Expired" would be a claim
+# this has no evidence for, which is the whole problem being fixed.
+_STATE_NOTES = {
+    "unknown": ("last listed {last_seen}; its source has not been read "
+                "successfully since, so whether this is still open is "
+                "unknown"),
+    "absent": ("last listed {last_seen}; its source has been read since "
+               "without it, so it looks no longer listed"),
+}
+
+
+def _source_state(row) -> str:
+    """Whether a role is still listed, gone, or unknown. See `closure.py`.
+
+    Guarded the way `_emp` is: `_row` is handed rows from more than one query
+    in the tests and in `serve`, and a missing column must cost a caption
+    rather than the whole page.
+    """
+    try:
+        v = row["source_state"]
+    except (IndexError, KeyError, TypeError):
+        return "listed"
+    return v if v in ("listed", "absent", "unknown") else "listed"
+
+
 def _flags(row) -> list:
     """The role's flags, or none of them.
 
@@ -1560,6 +1594,10 @@ def _row(r, arts, job, run=0, eager=True) -> str:
              if ("not screened" in f or "listing only" in f
                  or "listing-only" in f
                  or "not compared" in f or "sponsor" in f)]
+    # And whether anything can vouch for the role still being open.
+    caption = _STATE_NOTES.get(_source_state(r))
+    if caption:
+        notes.append(caption.format(last_seen=r["last_seen"]))
     busy = job["kind"] if job else ""
     has_cv = "cv" in arts
 

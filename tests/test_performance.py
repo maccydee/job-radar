@@ -84,14 +84,27 @@ def _job(src, location="London"):
 
 @contextlib.contextmanager
 def _stub_fetch(fetch_all, parse=None):
-    """Swap the two things `cmd_scan` reaches out through, and put them back."""
-    real_fetch, real_parse = cli.fetch_all, cli.adapters.parse
+    """Swap the two things `cmd_scan` reaches out through, and put them back.
+
+    Both spellings of the parse. `cmd_scan` calls `parse_or_why`, because an
+    empty list from `parse` is a board with no vacancies and a board whose
+    response could not be read at all, and closure detection has to tell those
+    apart. A stub on `parse` alone silently stopped being used, and these
+    tests then ran the REAL greenhouse parser over `b"[]"`, which raises: four
+    of them went red reporting "the parsing is happening after the fetch
+    again" and "nothing matched", neither of which was what had changed.
+    """
+    real_fetch = cli.fetch_all
+    real_parse, real_why = cli.adapters.parse, cli.adapters.parse_or_why
+    fn = parse or (lambda payload, src: _job(src))
     cli.fetch_all = fetch_all
-    cli.adapters.parse = parse or (lambda payload, src: _job(src))
+    cli.adapters.parse = fn
+    cli.adapters.parse_or_why = lambda payload, src: (fn(payload, src), "")
     try:
         yield
     finally:
-        cli.fetch_all, cli.adapters.parse = real_fetch, real_parse
+        cli.fetch_all = real_fetch
+        cli.adapters.parse, cli.adapters.parse_or_why = real_parse, real_why
 
 
 def test_the_scan_parses_each_source_before_the_fetch_has_finished():

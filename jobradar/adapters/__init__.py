@@ -805,6 +805,18 @@ def clear_unreadable() -> None:
 def parse(payload, src: Source) -> list[Job]:
     """Parse one board's payload, or record why not and return nothing.
 
+    The list alone. `parse_or_why` is the same call with the failure returned
+    rather than only printed, and anything deciding something on the strength
+    of a read has to use that one: an empty list from here is a board with no
+    vacancies and a board whose response could not be read at all, and those
+    two have never been the same fact.
+    """
+    return parse_or_why(payload, src)[0]
+
+
+def parse_or_why(payload, src: Source) -> tuple[list[Job], str]:
+    """Parse one board's payload. The second value says why not, when it failed.
+
     Returning `[]` is still right: one malformed board must not end a run over
     17,810 sources. Returning it SILENTLY is not, and that was the whole of
     this function until now. A board that answers HTTP 200 with a holding
@@ -824,6 +836,13 @@ def parse(payload, src: Source) -> list[Job]:
     `KeyboardInterrupt` is gone from the handler with no change in behaviour.
     It is a `BaseException`, so `except Exception` never caught it, and both
     arms of the conditional returned the same empty list anyway.
+
+    The why is RETURNED as well as printed, because printing it put the fact
+    on a terminal and nowhere a decision could reach. `closure.py` has to be
+    able to tell "read this board, this role is not on it" from "could not
+    read this board", and the difference was being written to stderr and
+    thrown away. The returned string is empty on success, which is the one
+    thing a caller may test.
     """
     p = by_name(src.platform) or detect(src.url)
     try:
@@ -843,7 +862,7 @@ def parse(payload, src: Source) -> list[Job]:
                 for j in jobs:
                     if not j.employment or j.employment == "unstated":
                         j.employment = declared
-        return jobs
+        return jobs, ""
     except Exception as e:  # a malformed board must not kill the whole run
         why = f"{type(e).__name__}: {str(e)[:200]}"
         with _unreadable_lock:
@@ -859,7 +878,7 @@ def parse(payload, src: Source) -> list[Job]:
                   f"be read; the rest are counted rather than listed. "
                   f"`adapters.unreadable()` has all of them.",
                   file=sys.stderr)
-        return []
+        return [], why
 
 
 def platform_names() -> list[str]:
