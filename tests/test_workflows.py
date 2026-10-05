@@ -312,11 +312,18 @@ def test_the_prune_has_an_absolute_cap_as_well_as_a_share():
     """A quarter of 653 sources was 163. A quarter of 17,810 is 4,452, so the
     share-based refusal inside the tool would now wave through a pull request
     deleting four thousand employers."""
-    run = _step_named(_load("validate.yml"), "validate", "Summarise")["run"]
-    m = re.search(r"CAP\s*=\s*(\d+)", run)
-    assert m, "there has to be an absolute cap on how many boards one week may delete"
-    cap = int(m.group(1))
+    # One number on the job, read by `validate --max-prune` and by the
+    # summary's check of what came back, so the two cannot drift. Since
+    # 4 October 2026 it limits the batch rather than vetoing the run; see
+    # tests/test_validate_batch_prune.py.
+    wf = _load("validate.yml")
+    raw = wf["jobs"]["validate"].get("env", {}).get("PRUNE_CAP")
+    assert raw is not None, \
+        "there has to be an absolute cap on how many boards one week may delete"
+    cap = int(raw)
     assert 0 < cap <= 1000, f"a cap of {cap} out of 17,810 is not a cap"
+    run = _step_named(wf, "validate", "Summarise")["run"]
+    assert 'CAP = int(os.environ["PRUNE_CAP"])' in run
     assert "len(dead) > CAP" in run
 
 

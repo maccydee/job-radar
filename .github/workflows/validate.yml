@@ -26,6 +26,9 @@ name: validate sources
 #     pull request rather than the prune. The prune only rewrites a file on the
 #     runner; nothing is destroyed until that file is committed, so the pull
 #     request is the last point where this can still be stopped.
+#
+# How many go in one week is capped, but the cap limits the batch rather than
+# vetoing the run. See PRUNE_CAP below for why that changed.
 
 on:
   schedule:
@@ -49,6 +52,28 @@ jobs:
     # says anything about this one. The step limit is below the job limit so
     # that the failure report at the end still gets to run.
     timeout-minutes: 330
+    env:
+      # The most boards one weekly pull request may remove. One number, read
+      # by `validate --max-prune` and by the summary's check of what came
+      # back, so the two cannot drift apart.
+      #
+      # An absolute number, because the refusal inside `validate` is a share.
+      # A quarter of 653 sources was 163; a quarter of 17,810 is 4,452, so the
+      # same rule that was tight on the old list would wave through a pull
+      # request deleting four thousand employers. Weekly attrition on a list
+      # this size is tens, not hundreds.
+      #
+      # It used to be a veto: more than this many due and nothing was opened.
+      # On 4 October 2026 that refused 308, which were not a platform outage
+      # but every board empty since the emptiness log was first committed on
+      # 12 September, all reaching 21 days on the same Sunday. A veto turns a
+      # backlog like that into a refusal every week for ever, since nothing is
+      # removed and next week finds the same boards due. So `validate` now
+      # removes the PRUNE_CAP boards empty longest and defers the rest, still
+      # in the list with their history, to the next run. What still catches an
+      # outage is guard 3, which counts everything that came back empty
+      # rather than the batch, and stays a refusal.
+      PRUNE_CAP: 250
     steps:
       - uses: actions/checkout@v4
 
@@ -65,11 +90,30 @@ jobs:
         # quarter of the list came back empty" refusal, which is the one thing
         # standing between a rate-limited runner and a pull request that
         # deletes several thousand live employers. It has no business in an
-        # unattended job.
+        # unattended job. --max-prune is a different thing: it limits how
+        # many go, it never lets more through.
         run: |
           job-radar validate --file sources/sources.json \
                              --report out/validation.json \
-                             --prune
+                             --prune --max-prune "$PRUNE_CAP"
+
+      - name: Keep the report
+        # out/validation.json used to die with the runner. On 4 October the
+        # job refused a 308-board prune and there was no way afterwards to
+        # see which boards, from which platforms, or which rows were flagged:
+        # the one run that most needed reading was the one that left nothing
+        # to read. always(), so a refusal or a failed check still keeps it.
+        # The emptiness log goes with it, because a refused run commits
+        # nothing and that week's readings are otherwise lost too.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: |
+            out/validation.json
+            sources/empty-since.json
+          retention-days: 30
+          if-no-files-found: warn
 
       - name: Summarise
         id: sum
@@ -86,11 +130,17 @@ jobs:
           # Everything below that decides whether to delete keys on `pruned`.
           empty = r.get("dead") or []
           pruned = r.get("pruned")
+          # Boards that were due but held back because the batch was full.
+          # Still in sources.json, still in the emptiness log, due next week.
+          held = r.get("deferred")
           # A report without the field came from a validate that predates it.
           # "Cannot say what it would delete" must never read as "deletes
-          # nothing", so that refuses.
-          no_claim = pruned is None
+          # nothing", so that refuses. The same for `deferred`: a report that
+          # does not say what it held back would title its pull request as
+          # though nothing was, and that is a claim nobody measured.
+          no_claim = pruned is None or held is None
           dead = pruned or []
+          deferred = held or []
           mismatch = r.get("mismatch") or []
           unreachable = [x for x in rows if x.get("verdict") == "unreachable"]
           transport = [x for x in rows if x.get("transport")]
@@ -100,18 +150,50 @@ jobs:
           # per-row `prunable` flag and on the transport alert, so a future
           # refactor that lets a handshake failure reach the "dead" branch is
           # caught by a different piece of code than the one that broke.
-          unsafe = [d for d in dead
+          #
+          # Deferred rows are checked too. They are not deleted this week, but
+          # they are next week's batch, and an unsafe row anywhere in the due
+          # list means whatever chose it is broken, so the whole pull request
+          # refuses rather than the batch that happens to be clean.
+          unsafe = [d for d in dead + deferred
                     if d.get("transport")
                     or d.get("verdict") != "dead"
                     or d.get("prunable") is False]
 
-          # An absolute cap, because the refusal inside `validate` is a share.
-          # A quarter of 653 sources was 163; a quarter of 17,810 is 4,452, so
-          # the same rule that was tight on the old list would now wave through
-          # a pull request deleting four thousand employers. Weekly attrition
-          # on a list this size is tens, not hundreds.
-          CAP = 250
-          refuse = no_claim or bool(unsafe) or len(dead) > CAP
+          # The cap (see PRUNE_CAP on the job). `validate` was told to stop
+          # there, so a batch past it means the limit did not hold, which is a
+          # fault and not a backlog. And deferral only happens when the batch
+          # is full, so anything deferred beside a short batch means the two
+          # disagree about what the cap is.
+          CAP = int(os.environ["PRUNE_CAP"])
+          over = len(dead) > CAP
+          short = bool(deferred) and len(dead) != CAP
+          refuse = no_claim or bool(unsafe) or over or short
+
+          due = len(dead) + len(deferred)
+          if deferred:
+              title = (f"Prune {len(dead)} of {due} dead source(s); "
+                       f"{len(deferred)} deferred to the next run")
+              batch_note = (f"This is one batch of a backlog: {due} boards were "
+                            f"due for removal and at most {CAP} go in one week, "
+                            f"so the {len(dead)} empty longest are removed here. "
+                            f"The other {len(deferred)} are still in "
+                            f"sources/sources.json with their emptiness history "
+                            f"kept, and the next weekly run will offer them.")
+          else:
+              title = f"Prune {len(dead)} dead source(s)"
+              batch_note = ""
+          if no_claim:
+              reason = "the report does not say what the prune removed and deferred"
+          elif unsafe:
+              reason = f"{len(unsafe)} row(s) due for deletion are not safe to delete"
+          elif over:
+              reason = f"the batch of {len(dead)} is over the cap of {CAP} that validate was given"
+          elif short:
+              reason = (f"{len(deferred)} deferred beside a batch of {len(dead)}, "
+                        f"which is not the cap of {CAP}")
+          else:
+              reason = ""
 
           out = []
           out.append("## Source validation\n")
@@ -119,6 +201,8 @@ jobs:
           out.append(f"- empty today (answered, no postings): **{len(empty)}**")
           out.append(f"- empty, not yet for long enough to delete: **{r.get('waiting', 0)}**")
           out.append(f"- to be removed: **{len(dead)}**")
+          out.append(f"- due, deferred to the next run (over the cap of {CAP}): "
+                     f"**{len(deferred)}**")
           # Never shown before, which meant a run where nine thousand boards
           # could not be read looked exactly like a clean one.
           out.append(f"- unreachable (left alone): **{len(unreachable)}**")
@@ -126,8 +210,9 @@ jobs:
           out.append(f"- identity mismatch: **{len(mismatch)}**\n")
           if no_claim:
               out.append("### Refusing to commit anything\n")
-              out.append("The report does not say which boards the prune removed, "
-                         "so there is no claim to check the diff against.\n")
+              out.append("The report does not say which boards the prune removed "
+                         "and which it deferred, so there is no claim to check "
+                         "the diff against.\n")
           elif unsafe:
               out.append("### Refusing to open a pull request\n")
               out.append(f"{len(unsafe)} row(s) queued for deletion are not safe "
@@ -137,12 +222,16 @@ jobs:
                   out.append(f"- `{d['company']}`, verdict `{d.get('verdict')}`, "
                              f"transport `{d.get('transport')}`")
               out.append("")
-          elif len(dead) > CAP:
+          elif over or short:
               out.append("### Refusing to open a pull request\n")
-              out.append(f"{len(dead)} to remove of {r['total']} is above the cap of "
-                         f"{CAP}. That many boards do not die in a week: this is "
-                         "a platform change or a throttled runner. Nothing was "
-                         "committed. Re-run it, or run it from a laptop.\n")
+              out.append(f"`validate` was asked to remove at most {CAP} and came "
+                         f"back with {len(dead)} removed and {len(deferred)} "
+                         "deferred. The batch limit did not hold, so nothing "
+                         "about this run's deletions can be trusted. Nothing "
+                         "was committed.\n")
+          elif deferred:
+              out.append("### One batch of a backlog\n")
+              out.append(batch_note + "\n")
           if dead:
               out.append("### To be removed\n")
               for d in dead[:60]:
@@ -161,6 +250,10 @@ jobs:
               f.write(f"dead={len(dead)}\n")
               f.write(f"unreachable={len(unreachable)}\n")
               f.write(f"refuse={'true' if refuse else 'false'}\n")
+              f.write(f"deferred={len(deferred)}\n")
+              f.write(f"title={title}\n")
+              f.write(f"batch_note={batch_note}\n")
+              f.write(f"reason={reason}\n")
           PY
 
       - name: The diff has to match the claim
@@ -178,15 +271,21 @@ jobs:
         # stale branch, a bad merge, a truncated write, and anything else that
         # makes the diff disagree with the sentence describing it.
         #
+        # A batched week claims the batch, not the backlog: the title says
+        # "250 of 308", DEAD is 250, and the diff has to remove exactly 250.
+        # The deferred boards are still in the file, so a diff that dropped
+        # them as well fails here.
+        #
         # It runs on a clean week too, where the claim is zero, because a
         # clean week now commits as well (next step) and "removes nothing"
         # is a claim like any other.
         if: steps.sum.outputs.refuse != 'true'
         run: |
-          git show "origin/$BASE_BRANCH:sources/sources.json" > /tmp/base.json
+          git show "origin/$BASE_BRANCH:sources/sources.json" > "$RUNNER_TEMP/base.json"
           python3 - <<'EOF'
           import json, os, sys
-          base = json.load(open("/tmp/base.json", encoding="utf-8"))["sources"]
+          base = json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "base.json"),
+                                encoding="utf-8"))["sources"]
           head = json.load(open("sources/sources.json", encoding="utf-8"))["sources"]
           bk = {s["url"] for s in base}
           hk = {s["url"] for s in head}
@@ -262,10 +361,16 @@ jobs:
           add-paths: |
             sources/sources.json
             sources/empty-since.json
-          title: "Prune ${{ steps.sum.outputs.dead }} dead source(s)"
+          # Built in the summary, so a batch says it is one in the title:
+          # "Prune 250 of 308 dead source(s); 58 deferred to the next run".
+          # The number before "of" is the one the diff check above held the
+          # diff to.
+          title: ${{ steps.sum.outputs.title }}
           body: |
             Weekly source validation. Every bundled board was fetched and
             checked for live postings and for company identity.
+
+            ${{ steps.sum.outputs.batch_note }}
 
             Dead sources have been removed from `sources/sources.json`. A
             source is only dead if the board answered and had no postings.
@@ -278,7 +383,8 @@ jobs:
             place, because a mismatch needs a human to decide whether the
             token is wrong or the company simply renamed itself.
 
-            Full report is in the workflow summary.
+            Full report is in the workflow summary, and the report file
+            itself is kept as the run's `validation-report` artifact.
           commit-message: "sources: prune dead boards"
           delete-branch: true
 
@@ -288,8 +394,10 @@ jobs:
         # nothing was committed and the runner is thrown away, so the source
         # list upstream is untouched.
         if: steps.sum.outputs.refuse == 'true'
+        env:
+          REASON: ${{ steps.sum.outputs.reason }}
         run: |
-          echo "::error::Refusing to open a prune pull request: ${{ steps.sum.outputs.dead }} dead source(s), and rows that are not safe to delete. See the run summary. Nothing was committed."
+          echo "::error::Refusing to open a prune pull request: ${REASON}. See the run summary and the validation-report artifact. Nothing was committed."
           exit 1
 
       - name: Report a failed run
@@ -318,8 +426,11 @@ jobs:
 
           The usual causes:
 
-          1. It refused to prune. Either more than 250 boards were due for deletion, or a row queued for deletion had a transport failure against it. Both mean a throttled runner or a platform change, not that many employers died in a week.
-          2. It ran past its 300 minute step limit. The list is 17,810 entries and apply.workable.com alone is a 50 minute floor.
+          1. It refused to prune. A row due for deletion was not safe to delete (a transport failure, a verdict other than dead, or prunable false), the report did not say what it removed and deferred, or the batch did not respect the weekly cap. Each means something upstream is broken, not that many employers died in a week. A backlog bigger than the cap is not a refusal: it is pruned a batch at a time, and the pull request title says how many were deferred.
+          2. validate itself refused, because more than a quarter of the list came back empty. That is a platform outage or a throttled runner.
+          3. It ran past its 300 minute step limit. The list is 17,810 entries and apply.workable.com alone is a 50 minute floor.
+
+          The run's validation-report artifact holds the full report and that week's emptiness log.
 
           The source list is unchanged either way. This issue is filed once per failed run and is safe to close." \
             || echo "could not file an issue"

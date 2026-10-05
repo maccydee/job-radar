@@ -2162,6 +2162,36 @@ def cmd_validate(args) -> int:
         log.save()
         waiting = [r for r in prunable_rows if not log.settled(r["url"])]
         prunable_rows = [r for r in prunable_rows if log.settled(r["url"])]
+        # Each row carries the date it was first seen empty, so the report a
+        # reviewer opens says "empty since 12 September" beside each deletion
+        # instead of asking them to cross-reference the log.
+        for r in prunable_rows:
+            r["empty_since"] = log.first_empty(r["url"])
+
+        # At most --max-prune per run, oldest-empty first, the rest deferred.
+        #
+        # On 4 October 2026 the weekly job found 308 boards due and refused
+        # outright, because its cap was a veto: more than 250 and nothing was
+        # removed. They were not a platform outage. The emptiness log had been
+        # committed on 12 September, so every board empty since that first run
+        # reached 21 days on the same Sunday. A veto turns a cohort that size
+        # into a refusal that repeats every week for ever, since nothing is
+        # removed and the next run finds the same boards due plus that week's.
+        #
+        # Deferred boards stay in the list and keep their history (the log was
+        # recorded above, before any of this), so they are due again next run
+        # and go in the next batch. Oldest-empty first because that is the
+        # strongest evidence; the URL breaks ties, so two runs over the same
+        # evidence offer the same batch.
+        deferred: list[dict] = []
+        cap = getattr(args, "max_prune", None)
+        if cap and len(prunable_rows) > cap:
+            prunable_rows.sort(key=lambda r: (r["empty_since"] or "9999-99-99",
+                                              r["url"]))
+            prunable_rows, deferred = prunable_rows[:cap], prunable_rows[cap:]
+            _say(f"  {len(prunable_rows) + len(deferred)} board(s) are due for "
+                 f"removal; removing the {cap} empty longest (--max-prune) and "
+                 f"deferring {len(deferred)} to the next run.")
         if waiting:
             _say(f"  {len(waiting)} empty board(s) are not deletable yet: an "
                  f"empty board is a company with nothing open, not a dead "
@@ -2184,12 +2214,18 @@ def cmd_validate(args) -> int:
                 "total": len(rows), "dead": dead, "mismatch": mismatch,
                 "rows": rows, "pruned": prunable_rows,
                 "waiting": len(waiting),
+                # Always present, empty when nothing was held back, so a
+                # reader can tell "deferred none" from "did not say".
+                "deferred": deferred,
             }, indent=1))
         dead_urls = {r["url"] for r in prunable_rows}
         keep = [s for s in srcs if s.url not in dead_urls]
         src_mod.save(keep, args.file, meta={"pruned": len(srcs) - len(keep),
                                             "checked": datetime.now().date().isoformat()})
         _say(f"  pruned {len(srcs) - len(keep)} dead sources from {args.file}")
+        if deferred:
+            _say(f"  deferred {len(deferred)} to the next run, still in "
+                 f"{args.file} with their emptiness history kept")
     return 0
 
 
@@ -3020,6 +3056,24 @@ def _limit(v: str) -> int:
     return n
 
 
+def _positive_count(v: str) -> int:
+    """A batch size. At least one.
+
+    `--max-prune 0` would hold back every due board and remove none, and the
+    run would still finish and report a prune, every week, which is the
+    refusal it exists to replace wearing a success's clothes.
+    """
+    try:
+        n = int(v)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{v!r} is not a whole number.")
+    if n < 1:
+        raise argparse.ArgumentTypeError(
+            f"{n} is not a batch size. Use 1 or more, or leave the option "
+            f"out for no limit.")
+    return n
+
+
 # Written once because it is on nine subcommands, and because the second
 # sentence is the behaviour a reader has to be told: `list --db typo.db` used
 # to answer `0 role(s)` and leave a 64KB file behind, which is the confident
@@ -3147,6 +3201,12 @@ def build_parser() -> argparse.ArgumentParser:
                         "separate runs over several weeks, because an empty "
                         "board is usually a company with nothing open rather "
                         "than a dead one.")
+    v.add_argument("--max-prune", type=_positive_count, default=None,
+                   metavar="N",
+                   help="remove at most N boards this run, the ones empty "
+                        "longest first, and leave the rest in the list for "
+                        "the next run with their history kept. Without it "
+                        "every board that is due goes.")
     v.add_argument("--force-prune", action="store_true",
                    help="prune even when most of the list came back empty, "
                         "which normally means the network is the problem")
