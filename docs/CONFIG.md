@@ -167,6 +167,7 @@ means `banned_phrase` could not run, and that is not the same as a pass.
 | `--no-enrich` | scan | Skip fetching full postings for headline-only sources. They stay unscreenable. |
 | `--no-source-update` | scan | Do not fetch the current published source list first. The scan runs on the list it has and says how old that is. `sources.auto_update: false` is the permanent version. |
 | `--prune`, `--force-prune` | validate | Rewrite `--file` without the dead sources. |
+| `--max-prune N` | validate | With `--prune`, remove at most N boards, the ones empty longest first. The rest stay in the list with their emptiness history and are due again next run. The weekly workflow passes its cap here, so a backlog drains a batch at a time instead of being refused every week. |
 | `--refresh`, `--top` | rank | Re-score roles that already have a fit; how many to print. |
 | `--remove` | rescreen | Delete the stored roles that no longer match your config. Off by default: `rescreen` reports and changes nothing without it, and a role you have already given a status is never removed whatever it matches. |
 | `--date`, `--route`, `--ref`, `--cv`, `--cover`, `--salary`, `--contact`, `--closes` | applied | File the application itself. The first seven only apply to `applied` or `submitted`. `--closes` sets the closing date by hand. |
