@@ -12,6 +12,8 @@ scanner uses.
 | `rate-cv` | [maccydee/rate-cv](https://github.com/maccydee/rate-cv) | `fc8d1ab` |
 | `screen-role` | this repo | native |
 | `job-radar-setup` | this repo | native |
+| `mail-sync` | this repo | native |
+| `interview-prep` | this repo | native |
 
 `rate-cv` ships in two places on purpose. It stands on its own for anyone who
 only wants a CV scored, and it ships here so that cloning job-radar gets you a

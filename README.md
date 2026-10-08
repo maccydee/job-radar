@@ -363,6 +363,76 @@ Matching is by URL when you give one. Otherwise it uses the company name and a
 loose title match, so an entry you typed by hand still finds the posting when
 the wording differs. Giving only `org` mutes a whole company.
 
+### After you apply
+
+A status says where a role is now, and it overwrites itself. These commands
+keep what happened and when, so the next session does not have to remember.
+They are in the order you meet them.
+
+```bash
+job-radar applied "Example Corp" --date 2026-09-27 --route jobylon --ref 18640464 --salary 145000
+job-radar import-applications            # a dry run; --apply writes
+job-radar history "Example Corp"
+job-radar list --closing-within 7
+job-radar cvcheck CV.pdf --master master-cv.docx --role "Example Corp"
+job-radar mail-sync propose --from mail.json
+job-radar followups --write
+job-radar interview "Example Corp" --stage "hiring manager"
+job-radar evidence add "Example Corp" --source Glassdoor --figures "GBP 95-120k"
+job-radar generate "Example Corp" -k cv --review
+```
+
+`applied` with `--date`, `--route`, `--ref`, `--cv`, `--cover`, `--salary` and
+`--contact` files the application itself. With no `--date` it uses today and
+says so. Run it again on a later day and it reports the application already on
+file rather than adding a second one; any of those fields that are blank on file
+are filled in (an imported application can get its `--contact` this way), and
+one that differs is only replaced with `--set`. It never moves a rejected or
+interviewing role back to applied unless `-s applied` says to. `--date` works
+with any status, so `applied X -s rejected --date 2026-10-03` dates a rejection
+read days later on the day it came. `--closes` sets a closing date by hand.
+
+`import-applications` brings in what is already known: statuses with a note,
+and `| Role | Company | Route | CV |` tables from handoff files. It writes
+nothing without `--apply`. A date is taken from a note only when a word like
+"applied" sits next to it. Otherwise the date of the last status change is
+used and the row is marked ESTIMATED, because that is when it changed and not
+when you applied.
+
+`history` shows what happened to one role and where each fact came from.
+`list` shows when a posting closes, read from its own text, and
+`--closing-within` narrows to the next few days. A closing date nobody could
+read is left blank, which is not the same as having no deadline.
+
+`generate` now asks before it drafts. A role already applied for, or another
+role at the same company with a matching title, is refused with the date and
+route. `--force` drafts anyway. A screen is never refused.
+
+`cvcheck` lints a CV or cover letter wherever it was made: phrases you have
+ruled out, figures that are not in your master CV, em-dashes, a PDF older than
+the document it came from, the wrong author in the file properties, a page
+limit, and whether a parser can read the text and your email. Rules live in a
+claims file, `claims.local.yaml`, which is gitignored; start from
+[`claims.example.yaml`](claims.example.yaml). A check that could not run is
+reported as unmeasured and fails the run. Keyword gaps against a posting are
+shown and never fail it, and nothing suggests adding a word you cannot back up.
+
+`mail-sync` turns hiring mail into proposals that wait for your yes. It reads a
+JSON file written from your mailbox, so it never logs in and never sends. A
+read that skipped Deleted Items or Junk exits 3. The
+[`mail-sync` skill](skills/mail-sync/SKILL.md) drives an assistant's mail tool
+to write that file, read only.
+
+`followups` lists applications with no reply and, with `--write`, drafts a
+short note for each that can fairly be chased. It writes text files and sends
+nothing.
+
+`interview` writes a prep pack from what you actually sent, with no model and
+no network. `evidence` keeps researched pay figures with their source and date
+and marks old ones stale. `generate --review` adds a second agent that reads
+the finished draft against your CV but cannot edit it; if it does not run, the
+draft is marked as not reviewed.
+
 ### Roles the board has taken down
 
 `closed` is also set for you, but only on evidence. A scan writes down which

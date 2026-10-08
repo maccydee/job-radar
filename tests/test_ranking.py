@@ -689,3 +689,27 @@ if __name__ == "__main__":
                 print(f"  FAIL  {_name}")
                 traceback.print_exc()
     sys.exit(1 if failed else 0)
+
+
+def test_the_ranker_is_given_no_tools_rather_than_no_extra_tools():
+    """Review finding 15, same defect: `--allowedTools ""` adds nothing to the
+    user's settings, so a settings file allowing Bash gave the ranker Bash,
+    with posting text from the open web in its prompt."""
+    from unittest import mock
+    seen = []
+
+    class Fake:
+        returncode = 0
+        stdout = "[]"
+        stderr = ""
+
+    def run(cmd, **kw):
+        seen.append(cmd)
+        return Fake()
+
+    with mock.patch.object(rank.subprocess, "run", run), \
+            mock.patch("jobradar.runner.claude_bin", lambda: "claude"):
+        rank._call("prompt")
+    (cmd,) = seen
+    assert cmd[cmd.index("--tools") + 1] == "" and "--allowedTools" not in cmd, cmd
+    assert "--strict-mcp-config" in cmd

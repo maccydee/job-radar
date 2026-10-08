@@ -344,7 +344,13 @@ def _call(prompt: str, timeout: int | None = None) -> list[dict]:
     timeout = CALL_TIMEOUT if timeout is None else timeout
     # stdin closed: there is no terminal behind the dashboard or the scheduled
     # jobs, so anything the CLI tried to read would block until the timeout.
-    r = subprocess.run([exe, "-p", prompt, "--model", MODEL, "--allowedTools", ""],
+    #
+    # `--tools ""`, not `--allowedTools ""`: the second adds nothing to what
+    # the user's settings already allow, so a settings file allowing Bash gave
+    # the ranker Bash with posting text from the open web in its prompt. It
+    # needs no tool; `--strict-mcp-config` with no config loads no MCP server.
+    r = subprocess.run([exe, "-p", prompt, "--model", MODEL, "--tools", "",
+                        "--strict-mcp-config"],
                        capture_output=True, text=True, encoding="utf-8",
                        stdin=subprocess.DEVNULL, timeout=timeout)
     if r.returncode:

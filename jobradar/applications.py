@@ -32,6 +32,44 @@ def _norm(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", (s or "").lower()).strip()
 
 
+def same_employer(org: str, company: str) -> bool:
+    """The whole of `company`, as words, inside `org`.
+
+    `Application.matches` accepts the company as a substring of the org, which
+    is right for a loose warning and wrong anywhere a decision rests on it: a
+    role at "Wise" matches an entry for "Likewise Group". Used where a match
+    refuses a draft or writes a record.
+    """
+    a, b = _norm(org), _norm(company)
+    return bool(b) and re.search(rf"\b{re.escape(b)}\b", a) is not None
+
+
+# Words that change the grade of a job and not which job it is.
+_SENIORITY = {"senior", "sr", "snr", "junior", "jr", "principal", "staff", "lead",
+              "associate", "i", "ii", "iii", "iv"}
+
+
+def same_job_title(a: str, b: str) -> bool:
+    """Two titles name the same job: equal once normalised, or one inside the
+    other as whole words once seniority words are dropped.
+
+    Not the three-shared-words rule `Application.matches` uses for a loose
+    warning: "Senior Engineering Manager, Payments" and "... Platform" share
+    three words and are two teams, and a rejection from one refused a CV for
+    the other, for good. Used where a match refuses a draft.
+    """
+    na, nb = _norm(a), _norm(b)
+    if not na or not nb:
+        return False
+    if na == nb:
+        return True
+    ca = " ".join(w for w in na.split() if w not in _SENIORITY)
+    cb = " ".join(w for w in nb.split() if w not in _SENIORITY)
+    if not ca or not cb:
+        return False
+    return f" {ca} " in f" {cb} " or f" {cb} " in f" {ca} "
+
+
 @dataclass
 class Application:
     org: str = ""

@@ -61,6 +61,12 @@ def _download_name(company: str, title: str, kind: str, suffix: str) -> str:
 BULK_LIMIT = 40
 
 
+class DuplicateRefusal(str):
+    """A refusal because the role was already applied for. The page offers
+    "Draft anyway" for this one and no other: it used to print "send force:
+    true" to a person with no way to send it."""
+
+
 class Handler(BaseHTTPRequestHandler):
     db_path = None
     docs_base = None
@@ -429,7 +435,7 @@ class Handler(BaseHTTPRequestHandler):
             return True                      # curl and same-origin form posts
         return origin.split("//")[-1] in allowed
 
-    def _start_generation(self, con, uid, kind):
+    def _start_generation(self, con, uid, kind, force=False):
         """Queue one role. Returns (job_id, "") or (None, reason).
 
         Shared by the single button and the bulk one so a role cannot be
@@ -450,6 +456,16 @@ class Handler(BaseHTTPRequestHandler):
             if len((row["description"] or "").strip()) < 200:
                 return None, ("this posting has no description, so there is "
                               "nothing to screen. Open the advert instead.")
+        # Already applied for, or the same job under another id. Refused with
+        # the facts, not skipped quietly, and `force` must be the boolean true:
+        # a string like "false" is truthy and must not pass for consent.
+        refusal = store.duplicate_refusal(con, uid, kind)
+        if refusal and force is not True:
+            sentences, any_same = refusal
+            return None, DuplicateRefusal(" ".join(sentences) + (
+                " Drafting it spends tokens for nothing. Send force: true to "
+                "draft anyway." if any_same else
+                " If this is a different job, send force: true."))
         # Queue it, then let the pump decide what runs. The cap belongs on
         # what is RUNNING, not on what may be asked for: it used to sit here,
         # so nine selected roles became three started and six refused while
@@ -611,11 +627,13 @@ class Handler(BaseHTTPRequestHandler):
                 for one in uids:
                     if not isinstance(one, str):
                         continue
-                    job, why = self._start_generation(con, one, kind)
+                    job, why = self._start_generation(con, one, kind,
+                                                      force=data.get("force") is True)
                     if job:
                         accepted.append(one)
                     else:
-                        skipped.append({"uid": one, "why": why})
+                        skipped.append({"uid": one, "why": why,
+                                        "duplicate": isinstance(why, DuplicateRefusal)})
                 running = len(store.busy_uids(con))
                 return self._json({"ok": True, "kind": kind,
                                    "queued": accepted, "started": accepted,
@@ -647,7 +665,9 @@ class Handler(BaseHTTPRequestHandler):
                 if note is not None and not isinstance(note, str):
                     return self._json(
                         {"ok": False, "error": "a note has to be text"}, 400)
-                store.set_status(con, uid, status, note)
+                # `transition`, not `set_status`: the click is also a fact with a
+                # date, and `role_state.updated_at` forgets it on the next change.
+                store.transition(con, uid, status, note, source="dashboard")
                 return self._json({"ok": True, "uid": uid, "status": status})
 
             if path == "/api/generate":
@@ -657,9 +677,11 @@ class Handler(BaseHTTPRequestHandler):
                 if not isinstance(kind, str) or kind not in runner.KINDS:
                     return self._json({"ok": False, "error": "bad kind"}, 400)
                 # The cover letter needs the CV to check itself against.
-                ok, why = self._start_generation(con, uid, kind)
+                ok, why = self._start_generation(con, uid, kind,
+                                                 force=data.get("force") is True)
                 if not ok:
-                    return self._json({"ok": False, "error": why},
+                    return self._json({"ok": False, "error": why,
+                                       "duplicate": isinstance(why, DuplicateRefusal)},
                                       429 if "running" in why else 409)
                 return self._json({"ok": True, "job": ok, "kind": kind})
         finally:

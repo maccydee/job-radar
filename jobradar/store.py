@@ -12,6 +12,7 @@ paths to documents, and the repository is public.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import date
@@ -135,6 +136,68 @@ CREATE TABLE IF NOT EXISTS source_reads (
 );
 CREATE INDEX IF NOT EXISTS idx_source_reads_key
   ON source_reads(source_key, read_on);
+
+-- What was done about a role, as a record rather than a status. `role_state`
+-- says where a role is now and overwrites itself; these say what happened and
+-- when, and nothing overwrites them. The Brightwell duplicate happened because
+-- an application made by hand left no trace the next session could find.
+CREATE TABLE IF NOT EXISTS applications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uid TEXT NOT NULL REFERENCES roles(uid) ON DELETE CASCADE,
+  applied_on TEXT NOT NULL,
+  route TEXT DEFAULT '',
+  reference TEXT DEFAULT '',
+  cv_path TEXT DEFAULT '',
+  cover_path TEXT DEFAULT '',
+  salary_answer TEXT DEFAULT '',
+  contact TEXT DEFAULT '',
+  source TEXT NOT NULL DEFAULT 'manual',
+  created_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_applications_once
+  ON applications(uid, applied_on, source);
+
+CREATE TABLE IF NOT EXISTS app_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uid TEXT NOT NULL REFERENCES roles(uid) ON DELETE CASCADE,
+  at TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  detail TEXT DEFAULT '',
+  source TEXT NOT NULL DEFAULT 'manual',
+  created_at TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_events_once
+  ON app_events(uid, at, kind, source);
+CREATE INDEX IF NOT EXISTS idx_events_uid ON app_events(uid, at);
+
+CREATE TABLE IF NOT EXISTS mail_proposals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  message_id TEXT NOT NULL UNIQUE,
+  folder TEXT DEFAULT '',
+  received TEXT DEFAULT '',
+  subject TEXT DEFAULT '',
+  kind TEXT NOT NULL,
+  uid TEXT DEFAULT '',
+  new_status TEXT DEFAULT '',
+  event_kind TEXT DEFAULT '',
+  happens_at TEXT DEFAULT '',
+  evidence TEXT DEFAULT '',
+  warnings TEXT DEFAULT '[]',
+  state TEXT NOT NULL DEFAULT 'pending',   -- pending | applied | dismissed
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS company_evidence (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  company_key TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'salary',
+  source TEXT NOT NULL,
+  url TEXT DEFAULT '',
+  figures TEXT NOT NULL,
+  fetched_on TEXT NOT NULL,
+  note TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_evidence_company ON company_evidence(company_key);
 """
 
 # Terminal states: these roles stop appearing in results.
@@ -156,6 +219,25 @@ CLOSED_OUT = {"rejected", "withdrawn", "closed"}
 PROGRESS = {"new": 0, "skipped": 1, "interested": 2, "applied": 3,
             "submitted": 4, "closed": 5, "withdrawn": 6, "rejected": 7,
             "interviewing": 8, "offer": 9}
+
+
+def is_backwards(current: str, new: str) -> bool:
+    """Would moving a role from `current` to `new` undo something?
+
+    Not PROGRESS alone: it ranks `interviewing` above `rejected` because it
+    decides which of two merged copies to keep, so by it a rejected role going
+    back to interviewing is "forward", which is exactly what an interview
+    invite read days after a rejection does. An ended application (rejected,
+    withdrawn, closed) reopening is backwards; between live ones, PROGRESS
+    decides; ending one is never backwards.
+    """
+    if not new or new == current:
+        return False
+    if current in CLOSED_OUT:
+        return True
+    if new in CLOSED_OUT:
+        return False
+    return PROGRESS.get(new, 0) < PROGRESS.get(current, 0)
 
 
 class StoreError(Exception):
@@ -368,6 +450,13 @@ def _ensure_columns(con) -> None:
     # board's evidence.
     if "source_key" not in cols:
         _try_alter(con, "ALTER TABLE roles ADD COLUMN source_key TEXT DEFAULT ''")
+    # When a posting closes, and the words it was read from. Empty means
+    # "nothing here can say", which is different from "no deadline", and the
+    # evidence is kept so a wrong parse can be seen rather than trusted.
+    if "closes_on" not in cols:
+        _try_alter(con, "ALTER TABLE roles ADD COLUMN closes_on TEXT DEFAULT ''")
+    if "closes_evidence" not in cols:
+        _try_alter(con, "ALTER TABLE roles ADD COLUMN closes_evidence TEXT DEFAULT ''")
     # Outside the `if`, and not in `SCHEMA`: see the note there. The column is
     # guaranteed by the line above on an old database and by the CREATE TABLE
     # on a new one, so by here it always exists and the index can be asked for
@@ -695,6 +784,411 @@ def set_status(con, uid: str, status: str, note: str | None = None) -> None:
         (uid, status, note, date.today().isoformat(), note))
 
 
+_EVENT_FOR_STATUS = {"applied": "applied", "submitted": "applied",
+                     "interviewing": "interviewing", "offer": "offer",
+                     "rejected": "rejected", "withdrawn": "withdrawn"}
+
+
+def add_event(con, uid: str, kind: str, *, at: str | None = None,
+              detail: str = "", source: str = "manual") -> bool:
+    """Record something that happened. False when it is already on file."""
+    cur = con.execute(
+        "INSERT OR IGNORE INTO app_events (uid, at, kind, detail, source, created_at) "
+        "VALUES (?,?,?,?,?,?)",
+        (uid, at or date.today().isoformat(), kind, detail, source, _now()))
+    return bool(cur.rowcount)
+
+
+def record_application(con, uid: str, *, applied_on: str | None = None,
+                       route: str = "", reference: str = "", cv_path: str = "",
+                       cover_path: str = "", salary_answer: str = "",
+                       contact: str = "", source: str = "manual") -> bool:
+    """File an application. True if new, False if the same one is on file."""
+    on = applied_on or date.today().isoformat()
+    cur = con.execute(
+        "INSERT OR IGNORE INTO applications (uid, applied_on, route, reference, "
+        "cv_path, cover_path, salary_answer, contact, source, created_at) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (uid, on, route, reference, cv_path, cover_path, salary_answer,
+         contact, source, _now()))
+    if cur.rowcount:
+        # Not when an `applied` event for that day is already on file under
+        # another source: a dashboard click and a later `applied --date` for
+        # the same day are one fact, and the unique index only sees equal
+        # sources, so it would list the application twice.
+        if not con.execute("SELECT 1 FROM app_events WHERE uid=? AND at=? "
+                           "AND kind='applied'", (uid, on)).fetchone():
+            add_event(con, uid, "applied", at=on, source=source,
+                      detail=" ".join(x for x in (route, reference) if x))
+    return bool(cur.rowcount)
+
+
+def transition(con, uid: str, status: str, note: str | None = None, *,
+               source: str = "manual", at: str | None = None) -> None:
+    """`set_status` plus the history line. Use this wherever a person or a
+    mail sync moves a role; `set_status` alone loses when it happened."""
+    set_status(con, uid, status, note)
+    kind = _EVENT_FOR_STATUS.get(status)
+    if kind:
+        add_event(con, uid, kind, at=at, detail=note or "", source=source)
+
+
+def events_for(con, uid: str) -> list[dict]:
+    return [dict(r) for r in con.execute(
+        "SELECT * FROM app_events WHERE uid=? ORDER BY at, id", (uid,))]
+
+
+def applications_for(con, uid: str) -> list[dict]:
+    return [dict(r) for r in con.execute(
+        "SELECT * FROM applications WHERE uid=? ORDER BY applied_on, id", (uid,))]
+
+
+def applied_on(con, uid: str) -> str | None:
+    r = con.execute("SELECT MIN(applied_on) AS d FROM applications WHERE uid=?",
+                    (uid,)).fetchone()
+    if r and r["d"]:
+        return r["d"]
+    r = con.execute("SELECT MIN(at) AS d FROM app_events WHERE uid=? AND kind='applied'",
+                    (uid,)).fetchone()
+    return r["d"] if r and r["d"] else None
+
+
+# The source the importer files a date under when it came from
+# `role_state.updated_at`: when a status last changed, not when anything was
+# sent. Any date carried by a row or event with this source is an estimate,
+# and every message that prints one says so.
+ESTIMATED_SOURCE = "import:updated_at"
+# An application recorded because an employer's message said one was on file
+# ("you already applied", "we have received your application"). The message's
+# day is the latest the application can have gone in, not the day it did.
+ACK_SOURCE = "mail-ack:"
+
+
+def is_estimated(source: str | None) -> bool:
+    s = source or ""
+    return s == ESTIMATED_SOURCE or s.startswith(ACK_SOURCE)
+
+
+def date_said(on: str | None, estimated) -> str:
+    """A date as a sentence should print it: plain when it is known, hedged
+    when it was estimated. `estimated` is the source the date came from (or
+    True for "from updated_at"), so the hedge can say why."""
+    if not on:
+        return "an unknown date"
+    if estimated is True or estimated == ESTIMATED_SOURCE:
+        return f"about {on} (estimated from when the status last changed)"
+    if isinstance(estimated, str) and estimated.startswith(ACK_SOURCE):
+        return (f"on or before {on} (an employer's message that day said an "
+                f"application was on file)")
+    return on
+
+
+def applied_on_estimate(con, uid: str) -> tuple[str | None, str]:
+    """`applied_on`, and the source it came from when that makes it an
+    estimate ("" when the date is known)."""
+    r = con.execute("SELECT applied_on, source FROM applications WHERE uid=? "
+                    "ORDER BY applied_on, id LIMIT 1", (uid,)).fetchone()
+    if r is None:
+        r = con.execute("SELECT at AS applied_on, source FROM app_events WHERE uid=? "
+                        "AND kind='applied' ORDER BY at, id LIMIT 1", (uid,)).fetchone()
+    if r is None:
+        return None, ""
+    return r["applied_on"], (r["source"] if is_estimated(r["source"]) else "")
+
+
+_APPLIED = ("applied", "submitted", "interviewing", "offer", "rejected", "withdrawn")
+
+
+def _prior(con, uid: str, same: bool, status: str) -> dict:
+    recs = applications_for(con, uid)
+    on, estimated = applied_on_estimate(con, uid)
+    ack = con.execute("SELECT id, happens_at FROM mail_proposals WHERE uid=? AND "
+                      "state='pending' AND kind='acknowledgement' ORDER BY happens_at, id "
+                      "LIMIT 1", (uid,)).fetchone()
+    return {"uid": uid, "same": same, "status": status,
+            "applied_on": recs[0]["applied_on"] if recs else on,
+            "estimated": ((recs[0]["source"] if is_estimated(recs[0]["source"]) else "")
+                          if recs else estimated),
+            "route": recs[0]["route"] if recs else "",
+            "reference": recs[0]["reference"] if recs else "",
+            "recorded": bool(recs),
+            "pending_ack": dict(ack) if ack and not recs else None}
+
+
+def prior_applications(con, uid: str) -> list[dict]:
+    """Every reason to think this job has already been applied for: the role
+    itself, and any other role at the same company whose title matches."""
+    from types import SimpleNamespace
+
+    from . import applications
+    me = con.execute("SELECT company, title FROM roles WHERE uid=?", (uid,)).fetchone()
+    if me is None:
+        return []
+    out = []
+    own = con.execute("SELECT status FROM role_state WHERE uid=?", (uid,)).fetchone()
+    status = own["status"] if own else "new"
+    # An `acknowledged` event is an employer saying an application exists
+    # ("you already applied"), recorded or not: counted, because missing it
+    # is how the Brightwell duplicate went out.
+    # A pending mail proposal of that kind counts too: an employer's message
+    # saying so is evidence before anybody has applied the proposal.
+    acked = ("(EXISTS (SELECT 1 FROM app_events e WHERE e.uid=%s AND "
+             "e.kind IN ('applied','acknowledged')) OR EXISTS (SELECT 1 FROM "
+             "mail_proposals m WHERE m.uid=%s AND m.state='pending' AND "
+             "m.kind='acknowledgement'))")
+    if (status in _APPLIED or applications_for(con, uid)
+            or con.execute("SELECT " + acked % ("?", "?"), (uid, uid)).fetchone()[0]):
+        out.append(_prior(con, uid, True, status))
+    probe = applications.Application(org=me["company"], role=me["title"])
+    # A role counts as applied-for on its status OR on a record: a handoff
+    # import can file an application against a role still marked new.
+    for r in con.execute(
+            "SELECT r.uid, r.company, r.title, COALESCE(s.status,'new') AS status "
+            "FROM roles r LEFT JOIN role_state s ON s.uid=r.uid "
+            "WHERE r.uid<>? AND (COALESCE(s.status,'new') IN (%s) OR EXISTS "
+            "(SELECT 1 FROM applications a WHERE a.uid=r.uid) OR %s)"
+            % (",".join("?" * len(_APPLIED)), acked % ("r.uid", "r.uid")),
+            (uid, *_APPLIED)).fetchall():
+        # The same job, not merely the same employer and three shared words:
+        # a sibling refusal blocks a draft for good, so it needs the title.
+        if (applications.same_employer(me["company"], r["company"])
+                and probe.matches(SimpleNamespace(url="", company=r["company"],
+                                                  title=r["title"]))
+                and applications.same_job_title(me["title"], r["title"])):
+            out.append(_prior(con, r["uid"], False, r["status"]))
+    return out
+
+
+def possible_duplicates(con, uid: str) -> list[dict]:
+    return [p for p in prior_applications(con, uid) if not p["same"]]
+
+
+def describe_prior(p: dict, company: str, title: str) -> str:
+    """One sentence on one prior application. Says plainly when the status has
+    nothing recorded behind it, because "applied" with no date is a claim
+    nobody can check."""
+    when = date_said(p["applied_on"], p.get("estimated", ""))
+    via = f" via {p['route']}" if p["route"] else ""
+    ref = f" (ref {p['reference']})" if p["reference"] else ""
+    fix = ("no application record: run import-applications or applied --date")
+    ack = p.get("pending_ack")
+    if ack:
+        said = (f"an employer's message of {ack['happens_at'] or 'an unknown date'} says "
+                f"an application is already on file (mail-sync proposal {ack['id']}, "
+                f"not yet applied)")
+        if p["same"]:
+            return f"{company} - {title}: {said}."
+        return f"another role, {p['uid']}, looks like the same job: {said}."
+    if p["same"]:
+        if not p["recorded"]:
+            return f"{company} - {title} is at status {p['status']} ({fix})."
+        now = "" if p["status"] in ("applied", "submitted") else f" It is now {p['status']}."
+        return (f"{company} - {title} was already applied for on {when}{via}{ref}."
+                f"{now}")
+    tail = "" if p["recorded"] else f" ({fix}; status {p['status']})"
+    return (f"another role, {p['uid']}, looks like the same job and was applied "
+            f"for on {when}{via}{ref}.{tail}")
+
+
+def duplicate_refusal(con, uid: str, kind: str):
+    """(sentences, any_same) when a draft of `kind` should be refused, or None.
+
+    Only documents that spend tokens on the application itself are guarded: a
+    screen costs little and people re-screen a role they applied for on purpose.
+    """
+    if kind not in ("cv", "cover_letter"):
+        return None
+    priors = prior_applications(con, uid)
+    if not priors:
+        return None
+    me = con.execute("SELECT company, title FROM roles WHERE uid=?", (uid,)).fetchone()
+    return ([describe_prior(p, me["company"], me["title"]) for p in priors],
+            any(p["same"] for p in priors))
+
+
+# --------------------------------------------------------------- evidence
+
+STALE_DAYS = 90
+
+
+def company_key(name: str) -> str:
+    """"MARLOW & STONE", "m & s" and "M  &  S" are one company."""
+    return re.sub(r"[^a-z0-9]+", " ", (name or "").lower()).strip()
+
+
+def add_evidence(con, company: str, *, source: str, figures: str, url: str = "",
+                 kind: str = "salary", fetched_on: str | None = None,
+                 note: str = "") -> bool:
+    """File one researched figure. True if new, False if the same source, URL
+    and figures are already on file for that day.
+
+    A figure with no source is a rumour, and a ledger of rumours reads exactly
+    like a ledger of evidence, so it is refused here rather than flagged later.
+    """
+    if not (source or "").strip() or not (figures or "").strip():
+        raise ValueError("a figure with no source is not evidence")
+    key = company_key(company)
+    if not key:
+        raise ValueError(f"company {company!r} has no letters or digits to file it under")
+    on = fetched_on or date.today().isoformat()
+    date.fromisoformat(on)                     # (WHY: raises ValueError on a non-date)
+    if con.execute("SELECT 1 FROM company_evidence WHERE company_key=? AND kind=? AND "
+                   "source=? AND url=? AND figures=? AND fetched_on=?",
+                   (key, kind, source, url, figures, on)).fetchone():
+        return False
+    con.execute("INSERT INTO company_evidence (company_key, kind, source, url, figures, "
+                "fetched_on, note) VALUES (?,?,?,?,?,?,?)",
+                (key, kind, source, url, figures, on, note))
+    return True
+
+
+def evidence_for(con, company: str) -> list[dict]:
+    return [dict(r) for r in con.execute(
+        "SELECT * FROM company_evidence WHERE company_key=? ORDER BY fetched_on DESC, id DESC",
+        (company_key(company),))]
+
+
+def describe_evidence(row: dict, today: date) -> str:
+    """One line, with its age. Pay moves, so a figure over STALE_DAYS old says
+    so on the line rather than reading as current."""
+    age = (today - date.fromisoformat(row["fetched_on"])).days
+    tag = f"STALE ({age} days)" if age > STALE_DAYS else f"fresh ({age} days)"
+    return (f"{row['source']}: {row['figures']}  [{tag}]"
+            + (f"  {row['url']}" if row["url"] else ""))
+
+
+_APP_FIELDS = ("route", "reference", "cv_path", "cover_path", "salary_answer", "contact")
+
+
+def move_application_history(con, *, keep: str, lose: str) -> None:
+    """Re-point the application record, its events and any mail proposals from
+    one role to another.
+
+    Both history tables carry a unique index that includes the uid. A
+    collision means `keep` already holds the same fact, so the loser's row is
+    dropped rather than failing the merge, but not before what it knew is
+    copied across: two copies applied for on one day under one source used to
+    lose the losing copy's route, reference and contact outright. The kept
+    row's own values stand and only its blanks are filled; of two events for
+    the same thing, the longer detail is kept.
+
+    `mail_proposals.uid` has no foreign key, so nothing cascades and nothing
+    errors: a proposal left on the losing id reported "role no longer exists"
+    on apply, and the rejection it carried could never reach the survivor.
+    """
+    for a in con.execute("SELECT * FROM applications WHERE uid=?", (lose,)).fetchall():
+        k = con.execute("SELECT * FROM applications WHERE uid=? AND applied_on=? AND source=?",
+                        (keep, a["applied_on"], a["source"])).fetchone()
+        if k is None:
+            continue
+        fill = [f for f in _APP_FIELDS if not (k[f] or "") and (a[f] or "")]
+        if fill:
+            con.execute(f"UPDATE applications SET {', '.join(f'{f}=?' for f in fill)} "
+                        f"WHERE id=?", (*[a[f] for f in fill], k["id"]))
+    for e in con.execute("SELECT * FROM app_events WHERE uid=?", (lose,)).fetchall():
+        con.execute("UPDATE app_events SET detail=? WHERE uid=? AND at=? AND kind=? "
+                    "AND source=? AND length(COALESCE(detail,'')) < ?",
+                    (e["detail"], keep, e["at"], e["kind"], e["source"],
+                     len(e["detail"] or "")))
+    for table in ("applications", "app_events"):
+        con.execute(f"UPDATE OR IGNORE {table} SET uid=? WHERE uid=?", (keep, lose))
+        con.execute(f"DELETE FROM {table} WHERE uid=?", (lose,))
+    con.execute("UPDATE mail_proposals SET uid=? WHERE uid=?", (keep, lose))
+    repoint_proposal_candidates(con, lose, keep)
+
+
+def repoint_proposal_candidates(con, old: str, new: str) -> None:
+    """An unmatched proposal names its candidate roles in a warning. When a
+    candidate's id goes away (merged, rekeyed) the warning would name a role
+    that no longer exists, so `--role` with that id could never work."""
+    for r in con.execute("SELECT id, warnings FROM mail_proposals WHERE state='pending' "
+                         "AND instr(warnings, ?) > 0", (old,)).fetchall():
+        try:
+            warns = json.loads(r["warnings"] or "[]")
+        except ValueError:
+            continue
+        out = []
+        for w in warns:
+            if isinstance(w, str) and w.startswith("candidates: "):
+                ids = []
+                for c in w[len("candidates: "):].split(", "):
+                    c = new if c == old else c
+                    if c not in ids:
+                        ids.append(c)
+                w = "candidates: " + ", ".join(ids)
+            out.append(w)
+        con.execute("UPDATE mail_proposals SET warnings=? WHERE id=?",
+                    (json.dumps(out), r["id"]))
+
+
+def set_closing(con, uid: str, iso: str, evidence: str) -> None:
+    """Store a closing date. Refuses anything that is not YYYY-MM-DD, because a
+    free-text value here would sort and compare as though it were a date."""
+    date.fromisoformat(iso)          # (WHY: raises ValueError on a non-date)
+    con.execute("UPDATE roles SET closes_on=?, closes_evidence=? WHERE uid=?",
+                (iso, evidence[:200], uid))
+
+
+HAND_SET = "by hand"
+
+
+def backfill_closing_dates(con, today: date | None = None, *, rederive: bool = False) -> dict:
+    """Read closing dates out of stored descriptions. Never overwrites one that
+    is already set. Returns what happened, in four separate counts, because
+    "found nothing" and "could not read it" are different answers.
+
+    `rederive` also re-reads every date the parser wrote (non-empty evidence
+    that is not "by hand"), so a fixed parser can correct what a broken one
+    stored: the plain backfill skips any role with a date, so a closing date
+    read as the interview date would otherwise sit there for good. A re-read
+    that now finds nothing clears the date rather than keeping the old guess;
+    `changed` and `cleared` say how many moved.
+    """
+    from . import deadlines
+    today = today or date.today()
+    out = {"set": 0, "ambiguous": 0, "no_text": 0, "nothing": 0}
+    if rederive:
+        out.update(changed=0, cleared=0)
+        for r in con.execute(
+                "SELECT uid, description, first_seen, closes_on FROM roles "
+                "WHERE COALESCE(closes_on,'')<>'' AND COALESCE(closes_evidence,'')<>'' "
+                "AND closes_evidence<>?", (HAND_SET,)).fetchall():
+            try:
+                ref = date.fromisoformat((r["first_seen"] or "")[:10])
+            except ValueError:
+                ref = today
+            got = deadlines.closing_date((r["description"] or "").strip(), ref)
+            if got is None:
+                con.execute("UPDATE roles SET closes_on='', closes_evidence='' WHERE uid=?",
+                            (r["uid"],))
+                out["cleared"] += 1
+            elif got.iso != r["closes_on"]:
+                set_closing(con, r["uid"], got.iso, got.evidence)
+                out["changed"] += 1
+    for r in con.execute("SELECT uid, description, first_seen FROM roles "
+                         "WHERE COALESCE(closes_on,'')=''").fetchall():
+        text = (r["description"] or "").strip()
+        if not text:
+            out["no_text"] += 1
+            continue
+        # A date with no year is relative to when the posting was written, so
+        # it is read against the day it was first seen. Read against today it
+        # rolled "30th September" a month later to September of the next year.
+        try:
+            ref = date.fromisoformat((r["first_seen"] or "")[:10])
+        except ValueError:
+            ref = today
+        got = deadlines.closing_date(text, ref)
+        if got:
+            set_closing(con, r["uid"], got.iso, got.evidence)
+            out["set"] += 1
+        elif deadlines.has_closing_cue_with_unreadable_date(text, ref):
+            out["ambiguous"] += 1
+        else:
+            out["nothing"] += 1
+    return out
+
+
 def _as_list(raw) -> list:
     """A JSON list out of a column, or an empty one. Never raises."""
     try:
@@ -959,50 +1453,70 @@ def merge_duplicates(con, cfg=None) -> int:
             keep, losers = members[0], members[1:]
             _keep_locations(con, keep, members, cfg)
             for lose in losers:
-                st = con.execute("SELECT status,note FROM role_state WHERE uid=?",
-                                 (lose["uid"],)).fetchone()
-                if st and st["status"] != "new":
-                    cur = con.execute("SELECT status,note FROM role_state WHERE uid=?",
-                                      (keep["uid"],)).fetchone()
-                    cur_s = cur["status"] if cur else "new"
-                    # Carry the further-along status across, not merely any status
-                    # onto a blank one. The old rule only copied when the keeper
-                    # was "new", so merging a role you were interviewing for into
-                    # one you had merely marked interested threw the interview
-                    # away -- and drafting a CV sets a role to "interested", so one
-                    # click was enough to arm it. This runs unattended on scan.
-                    if PROGRESS.get(st["status"], 0) > PROGRESS.get(cur_s, 0):
-                        set_status(con, keep["uid"], st["status"], st["note"] or None)
-                    elif st["note"] and not (cur and cur["note"]):
-                        set_status(con, keep["uid"], cur_s, st["note"])
-                # The fit score moves for the same reason the artifacts do: it was
-                # paid for. `rank` spends real money and real minutes on it, and
-                # this function runs unattended on every scan, so a duplicate
-                # arriving on Tuesday quietly deleted Monday's score. It did not
-                # read as a loss either: the keeper's fit stays -1, and -1 means
-                # "not yet judged", so the role the model had scored 91 came back
-                # as unranked, indistinguishable from one that had never been
-                # looked at -- and `rank` then charged for it a second time.
-                #
-                # Only ever into a gap. A keeper that already has a score keeps it:
-                # its score was judged against its own description, which is the
-                # longer one, which is why it is the keeper.
-                if lose["fit"] is not None and lose["fit"] >= 0:
-                    kept_fit = con.execute("SELECT fit FROM roles WHERE uid=?",
-                                           (keep["uid"],)).fetchone()
-                    # Spelled out rather than `kept_fit["fit"] or -1`: a genuine
-                    # score of 0 is falsy, and treating it as "no score" would let
-                    # the merge overwrite the one verdict `rank` calls terminal.
-                    kf = kept_fit["fit"] if kept_fit is not None else None
-                    if kf is None or kf < 0:
-                        con.execute("UPDATE roles SET fit=?, fit_why=? WHERE uid=?",
-                                    (lose["fit"], lose["fit_why"] or "", keep["uid"]))
-                con.execute("UPDATE artifacts SET uid=? WHERE uid=?",
-                            (keep["uid"], lose["uid"]))
-                con.execute("DELETE FROM jobs WHERE uid=?", (lose["uid"],))
-                con.execute("DELETE FROM role_state WHERE uid=?", (lose["uid"],))
-                con.execute("DELETE FROM roles WHERE uid=?", (lose["uid"],))
-                merged += 1
+                # One transaction per losing row, from reading its status to
+                # deleting it. In autocommit an `applied` written to the loser
+                # between the history move and the DELETE (a dashboard click
+                # while the scan merges) cascaded away with the row. Taken
+                # with BEGIN IMMEDIATE, that writer waits, and then finds the
+                # row gone, which is an error it sees rather than a loss.
+                own = not con.in_transaction
+                if own:
+                    con.execute("BEGIN IMMEDIATE")
+                try:
+                    st = con.execute("SELECT status,note FROM role_state WHERE uid=?",
+                                     (lose["uid"],)).fetchone()
+                    if st and st["status"] != "new":
+                        cur = con.execute("SELECT status,note FROM role_state WHERE uid=?",
+                                          (keep["uid"],)).fetchone()
+                        cur_s = cur["status"] if cur else "new"
+                        # Carry the further-along status across, not merely any status
+                        # onto a blank one. The old rule only copied when the keeper
+                        # was "new", so merging a role you were interviewing for into
+                        # one you had merely marked interested threw the interview
+                        # away -- and drafting a CV sets a role to "interested", so one
+                        # click was enough to arm it. This runs unattended on scan.
+                        if PROGRESS.get(st["status"], 0) > PROGRESS.get(cur_s, 0):
+                            set_status(con, keep["uid"], st["status"], st["note"] or None)
+                        elif st["note"] and not (cur and cur["note"]):
+                            set_status(con, keep["uid"], cur_s, st["note"])
+                    # The fit score moves for the same reason the artifacts do: it was
+                    # paid for. `rank` spends real money and real minutes on it, and
+                    # this function runs unattended on every scan, so a duplicate
+                    # arriving on Tuesday quietly deleted Monday's score. It did not
+                    # read as a loss either: the keeper's fit stays -1, and -1 means
+                    # "not yet judged", so the role the model had scored 91 came back
+                    # as unranked, indistinguishable from one that had never been
+                    # looked at -- and `rank` then charged for it a second time.
+                    #
+                    # Only ever into a gap. A keeper that already has a score keeps it:
+                    # its score was judged against its own description, which is the
+                    # longer one, which is why it is the keeper.
+                    if lose["fit"] is not None and lose["fit"] >= 0:
+                        kept_fit = con.execute("SELECT fit FROM roles WHERE uid=?",
+                                               (keep["uid"],)).fetchone()
+                        # Spelled out rather than `kept_fit["fit"] or -1`: a genuine
+                        # score of 0 is falsy, and treating it as "no score" would let
+                        # the merge overwrite the one verdict `rank` calls terminal.
+                        kf = kept_fit["fit"] if kept_fit is not None else None
+                        if kf is None or kf < 0:
+                            con.execute("UPDATE roles SET fit=?, fit_why=? WHERE uid=?",
+                                        (lose["fit"], lose["fit_why"] or "", keep["uid"]))
+                    con.execute("UPDATE artifacts SET uid=? WHERE uid=?",
+                                (keep["uid"], lose["uid"]))
+                    # The losing row is deleted below and these cascade from it, so
+                    # an application made through the copy that lost would vanish
+                    # with the duplicate.
+                    move_application_history(con, keep=keep["uid"], lose=lose["uid"])
+                    con.execute("DELETE FROM jobs WHERE uid=?", (lose["uid"],))
+                    con.execute("DELETE FROM role_state WHERE uid=?", (lose["uid"],))
+                    con.execute("DELETE FROM roles WHERE uid=?", (lose["uid"],))
+                    if own:
+                        con.execute("COMMIT")
+                    merged += 1
+                except BaseException:
+                    if own:
+                        con.execute("ROLLBACK")
+                    raise
     return merged
 
 
@@ -1243,11 +1757,14 @@ def _absorb_into(con, *, keep: str, lose: str) -> None:
             set_status(con, keep, st["status"], st["note"] or None)
         elif st["note"] and not (cur and cur["note"]):
             set_status(con, keep, cur_s, st["note"])
+    # No `try/except: pass` here. It was there for a table an older schema
+    # might lack, and what it actually did was make a table that had been
+    # renamed or dropped lose every merged row with no sign of it. Every table
+    # named below is created by SCHEMA on connect, so a missing one is a bug
+    # and must raise.
     for table in ("artifacts", "jobs"):
-        try:
-            con.execute(f"UPDATE {table} SET uid=? WHERE uid=?", (keep, lose))
-        except Exception:
-            pass
+        con.execute(f"UPDATE {table} SET uid=? WHERE uid=?", (keep, lose))
+    move_application_history(con, keep=keep, lose=lose)
     lose_fit = con.execute("SELECT fit, fit_why FROM roles WHERE uid=?",
                            (lose,)).fetchone()
     if lose_fit is not None and (lose_fit["fit"] or -1) >= 0:
@@ -1371,6 +1888,12 @@ def _rekey_inside(con, Job) -> int:
                 # A table an older schema does not have. The roles row still
                 # has to move, so this is not a reason to stop.
                 pass
+        # Not in the tolerant loop above: these exist on every database this
+        # version opens, and the foreign keys are checked at the commit, so a
+        # child left under the old id would make the whole rename refuse.
+        for table in ("applications", "app_events", "mail_proposals"):
+            con.execute(f"UPDATE {table} SET uid=? WHERE uid=?", (new, old))
+        repoint_proposal_candidates(con, old, new)
         con.execute("UPDATE roles SET uid=? WHERE uid=?", (new, old))
         taken.add(new)
         done += 1

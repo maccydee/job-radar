@@ -133,6 +133,25 @@ refused at load rather than quietly matching nothing. Check yours with
 | `retries` | number | Default 2. |
 | `user_agent` | string | Identifies the tool. Leave it identifying. **Accepted but not currently applied**: the loader validates the key and then does not read it, so every request goes out under the default agent. |
 
+## The claims file
+
+`job-radar cvcheck` and `job-radar followups` read a separate file for the rules
+that belong to one person. It is `claims.local.yaml` in the working directory or
+the checkout (then `claims.yaml`), or whatever `--claims` names. `*.local.yaml`
+is gitignored, so it stays yours on a public fork. Start from
+[`claims.example.yaml`](../claims.example.yaml).
+
+| key | type | notes |
+|---|---|---|
+| `author` | string | The name the file properties of a CV should carry. A blank or different author is a failed check. Also the sign-off name for `followups` drafts (its first word). |
+| `email` | string | The address a PDF must carry as literal text, because a parser reads the text layer and an email drawn as an icon is invisible to it. |
+| `max_pages` | number | The most pages a PDF may have. |
+| `banned` | list | Entries of `pattern` (a regular expression, matched ignoring case against every line) and `why` (shown in the report). Write `banned: []` to say there is nothing to ban. |
+
+A check whose rule is missing is reported as unmeasured, and an unmeasured check
+fails the run: no claims file, an empty one, or a file with no `banned` list
+means `banned_phrase` could not run, and that is not the same as a pass.
+
 ## Command-line flags not in the examples
 
 | flag | applies to | notes |
@@ -150,5 +169,14 @@ refused at load rather than quietly matching nothing. Check yours with
 | `--prune`, `--force-prune` | validate | Rewrite `--file` without the dead sources. |
 | `--refresh`, `--top` | rank | Re-score roles that already have a fit; how many to print. |
 | `--remove` | rescreen | Delete the stored roles that no longer match your config. Off by default: `rescreen` reports and changes nothing without it, and a role you have already given a status is never removed whatever it matches. |
+| `--date`, `--route`, `--ref`, `--cv`, `--cover`, `--salary`, `--contact`, `--closes` | applied | File the application itself. The first seven only apply to `applied` or `submitted`. `--closes` sets the closing date by hand. |
+| `--closing-within` | list | Only roles whose closing date falls in the next N days. A role whose date could not be read is not in this list. |
+| `--apply`, `--handoff` | import-applications | `--apply` writes; without it nothing is written. `--handoff` names a markdown file with a `Role / Company / Route / CV` table, repeatable. |
+| `--review` | generate | Also run a second agent over the finished draft. Spends more tokens. |
+| `--force` | generate | Also drafts a CV for a role that looks already applied for. |
+| `--master`, `--claims`, `--author`, `--max-pages`, `--contact-email`, `--role` | cvcheck | The master CV to compare figures with, the claims file, and the checks it configures. `--role` compares the CV with a stored posting. |
+| `--from`, `--allow-partial`, `--show-other` | mail-sync propose | The mail export to read; accept a read that skipped Deleted Items or Junk; list the messages that were not about a status. |
+| `--days`, `--write`, `--name` | followups | How long without a reply counts as quiet; where drafts go; the sign-off name. |
+| `--stage`, `--docs`, `--force` | interview | Which questions; where documents are kept; replace an existing pack. |
 | `--port`, `--host`, `--no-browser` | serve | |
 | `--defaults`, `--cv`, `--titles` | setup | `setup` asks questions and so refuses anything that is not a terminal. The scriptable form is `job-radar setup --defaults --cv PATH --titles "a,b"`; `--cv` is required with `--defaults`. Add `--scan` to run the first scan straight after. |

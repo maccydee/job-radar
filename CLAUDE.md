@@ -61,6 +61,14 @@ Three corollaries the codebase already applies:
   floor as though it shared one. The unknown case needs its own branch, and
   usually that branch is "show it and label it".
 
+- **A status that overwrites itself loses the date.** `role_state.updated_at`
+  is when a status last changed, so the day a role was applied for vanished
+  the moment it moved to `rejected`, and a duplicate application went out
+  because nothing could say the first one had. What happened and when is the
+  `applications` and `app_events` tables, which nothing overwrites. A date
+  taken from `updated_at` is an estimate and is labelled ESTIMATED, never
+  presented as the day it went in.
+
 ## Adding or changing an adapter
 
 Two things are part of the change, not follow-up work.

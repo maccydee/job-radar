@@ -7,13 +7,13 @@ import json
 import os
 import re
 import sys
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 
 import yaml
 
-from . import adapters, closure, output, progress as progress_mod, sources as src_mod
+from . import adapters, closure, deadlines, output, progress as progress_mod, sources as src_mod
 from . import source_update
 import webbrowser
 
@@ -2293,24 +2293,542 @@ def _resolve_uid(con, target: str):
     return None, (f"{len(rows)} roles match {t!r}. Pick one by uid:\n{listing}")
 
 
+def _via(route: str, reference: str) -> str:
+    return (f" via {route}" if route else "") + (f" (ref {reference})" if reference else "")
+
+
+_FIELD_NAMES = {"route": "route", "reference": "reference", "cv_path": "cv",
+                "cover_path": "cover", "salary_answer": "salary", "contact": "contact"}
+
+
+def _update_application(con, a: dict, fields: dict, overwrite: bool):
+    """Fill the blanks of an application already on file from `fields`, and
+    with `overwrite` replace values that differ. Returns (changed, refused),
+    field keys in both. Imported applications arrive with no contact, and a
+    follow-up needs one, so without this they could never be chased."""
+    changed, refused = [], []
+    for k, v in fields.items():
+        if not v or v == (a[k] or ""):
+            continue
+        if a[k] and not overwrite:
+            refused.append(k)
+            continue
+        changed.append(k)
+    if changed:
+        con.execute(f"UPDATE applications SET {', '.join(f'{k}=?' for k in changed)} "
+                    f"WHERE id=?", (*[fields[k] for k in changed], a["id"]))
+    return changed, refused
+
+
+def _status_to(con, uid: str, status: str, note, *, explicit: bool, at=None) -> None:
+    """Move to `status` and say so, or say why not.
+
+    `applied X` with no `-s` means applied, and re-running it on a role that
+    had since been rejected set it back to applied while printing "already
+    recorded". A move that would undo something now needs `-s` saying so, and
+    every change prints where it came from.
+    """
+    from . import store
+    current = store.status_of(con, uid)
+    if current != status and store.is_backwards(current, status) and not explicit:
+        if note is not None:
+            store.set_status(con, uid, current, note)
+        _say(f"  status stays {current} (pass -s {status} to move it back)")
+        return
+    if current == status:
+        store.set_status(con, uid, status, note)
+        _say(f"  -> {status}")
+        return
+    store.transition(con, uid, status, note, source="cli", at=at)
+    _say(f"  status: {current} -> {status}")
+
+
 def cmd_applied(args) -> int:
     """Record what happened with a role. Writes the database, same as the
-    dashboard does, so the two cannot disagree."""
+    dashboard does, so the two cannot disagree.
+
+    For `applied` and `submitted` it also files the application itself: the
+    date, route, reference and the rest. Status alone said where a role is
+    now and lost when it went in, which is what the next session needed.
+    """
     from . import store
+    fields = {"route": args.route or "", "reference": args.ref or "",
+              "cv_path": args.cv or "", "cover_path": args.cover or "",
+              "salary_answer": args.salary or "", "contact": args.contact or ""}
+    has_app_fields = any(fields.values())
+    status = args.status
+    if status is None:
+        # `applied X --closes DATE` sets a date and nothing else. Anything
+        # else with no status means the old default, applied.
+        status = None if (args.closes and not has_app_fields and not args.date) else "applied"
+    # Everything that can be refused is refused before anything is written, so
+    # a bad flag cannot leave half a command behind.
+    if status is not None and status not in store.STATUSES:
+        _say(f"status must be one of: {', '.join(store.STATUSES)}")
+        return 1
+    for flag, value in (("--date", args.date), ("--closes", args.closes)):
+        if value:
+            try:
+                date.fromisoformat(value)
+            except ValueError:
+                _say(f"{flag} {value!r} is not a date; use YYYY-MM-DD")
+                return 1
+    if has_app_fields and status not in ("applied", "submitted"):
+        _say("--route and the other application fields only apply to "
+             "applied or submitted")
+        return 1
     con = store.connect(args.db, must_exist=True)
     try:
-        if args.status not in store.STATUSES:
-            _say(f"status must be one of: {', '.join(store.STATUSES)}")
-            return 1
         uid, why = _resolve_uid(con, args.target)
         if not uid:
             _say(f"Could not identify a role: {why}")
             return 1
         row = con.execute("SELECT company, title FROM roles WHERE uid=?",
                           (uid,)).fetchone()
-        store.set_status(con, uid, args.status, args.note)
         _say(f"{row['company']} - {row['title'][:56]}")
-        _say(f"  -> {args.status}")
+        if status is None:
+            if args.note is not None:
+                store.set_status(con, uid, store.status_of(con, uid), args.note)
+        elif status in ("applied", "submitted"):
+            on = args.date or date.today().isoformat()
+            existing = store.applications_for(con, uid)
+            same_day = [a for a in existing if a["applied_on"] == on]
+            if existing and (not args.date or same_day):
+                # Already filed. Adding another row dated today is how a
+                # re-run on a later day became a second application, and the
+                # first thing this feature exists to stop.
+                a = (same_day or existing)[0]
+                filled, refused = _update_application(con, a, fields,
+                                                      getattr(args, "overwrite", False))
+                when = store.date_said(a["applied_on"], a["source"])
+                if filled:
+                    _say(f"  already on file for {when}; updated: "
+                         f"{', '.join(_FIELD_NAMES[k] for k in filled)}")
+                if refused:
+                    _say(f"  already on file for {when}"
+                         f"{_via(a['route'], a['reference'])}, with different "
+                         f"{', '.join(_FIELD_NAMES[k] for k in refused)}: not changed "
+                         f"(pass --set to overwrite)")
+                if not filled and not refused:
+                    _say(f"  already recorded: applied {when}"
+                         f"{_via(a['route'], a['reference'])} (pass --date to "
+                         f"record a further application)")
+                _status_to(con, uid, status, args.note, explicit=args.status is not None)
+            else:
+                # The record first, so its event carries the route and
+                # reference; `transition`'s own event for the same day is then
+                # the duplicate and is dropped.
+                store.record_application(con, uid, applied_on=on, source="cli",
+                                         **fields)
+                _say(f"  recorded: applied {on}"
+                     f"{_via(fields['route'], fields['reference'])}")
+                if not args.date:
+                    _say("  date: today (pass --date to backdate)")
+                _status_to(con, uid, status, args.note, explicit=args.status is not None,
+                           at=on)
+            for w in store.possible_duplicates(con, uid):
+                _say(f"  WARNING: possibly the same job as {w['uid']} "
+                     f"(applied {store.date_said(w['applied_on'], w['estimated'])} via "
+                     f"{w['route'] or 'unknown route'})")
+        else:
+            # `--date` is the day it happened, for any status. A rejection read
+            # three days late was otherwise dated the day it was typed in.
+            store.transition(con, uid, status, args.note, source="cli", at=args.date)
+            _say(f"  -> {status}" + (f" on {args.date}" if args.date else ""))
+        if args.closes:
+            store.set_closing(con, uid, args.closes, store.HAND_SET)
+            _say(f"  closes {args.closes}")
+        return 0
+    finally:
+        con.close()
+
+
+def cmd_history(args) -> int:
+    """What happened with a role, in order, and where each fact came from."""
+    from . import store
+    con = store.connect(args.db, must_exist=True)
+    try:
+        uid, why = _resolve_uid(con, args.target)
+        if not uid:
+            _say(f"Could not identify a role: {why}")
+            return 1
+        row = con.execute("SELECT company, title, closes_on FROM roles WHERE uid=?",
+                          (uid,)).fetchone()
+        _say(f"{row['company']} - {row['title'][:56]}  ({uid})")
+        apps, events = store.applications_for(con, uid), store.events_for(con, uid)
+        if not apps and not events:
+            _say(f"  no application history on file (status: "
+                 f"{store.status_of(con, uid)})")
+            return 0
+        for a in apps:
+            extra = "".join(f"  {k} {a[c]}" for k, c in
+                            (("cv", "cv_path"), ("cover", "cover_path"),
+                             ("salary", "salary_answer"), ("contact", "contact"))
+                            if a[c])
+            _say(f"  application: "
+                 f"{store.date_said(a['applied_on'], a['source'])}"
+                 f"{_via(a['route'], a['reference'])}"
+                 f"{extra}  [{a['source']}]")
+        for e in events:
+            _say(f"  {e['at']}  {e['kind']:<9} {e['detail']}  [{e['source']}]")
+        if row["closes_on"]:
+            _say(f"  closes {row['closes_on']}")
+        return 0
+    finally:
+        con.close()
+
+
+def cmd_cvcheck(args) -> int:
+    """Lint a CV or cover letter, wherever it was made.
+
+    Exit 0 only when every check on every file passed. A check that could not
+    run is reported as `unmeasured` and fails the run, because "could not
+    check" and "checked, fine" must not look alike.
+    """
+    from . import cvcheck
+    paths = [Path(p).expanduser() for p in args.paths]
+    # Every path is looked at before anything runs, and a bad one stops the
+    # command: a typo that dropped a file from the list would read as a clean
+    # run over the files that were left.
+    for p in paths:
+        if p.is_dir():
+            _say(f"{p} is a directory: name the files to check")
+            return 2
+        if not p.is_file():
+            _say(f"no such file: {p}")
+            return 2
+        if p.suffix.lower() not in cvcheck.TEXT_SUFFIXES:
+            _say(f"{p}: cvcheck reads {', '.join(cvcheck.TEXT_SUFFIXES)} files")
+            return 2
+    for label, value in (("--master", args.master), ("--claims", args.claims)):
+        if value and not Path(value).expanduser().is_file():
+            _say(f"no such file for {label}: {value}")
+            return 2
+    claims, problem = cvcheck.load_claims(Path(args.claims).expanduser()
+                                          if args.claims else None)
+    master_text = None
+    if args.master:
+        master_text, why = cvcheck.read_document(Path(args.master).expanduser())
+        if master_text is None:
+            _say(f"the master CV could not be read, so figures are unchecked: {why}")
+    jd_text = None
+    if args.role:
+        # The posting the CV is for, from the database. An unknown role is a
+        # mistake to stop on; a known role with no stored text is passed on as
+        # empty, which the keyword check reports as unmeasured.
+        from . import store
+        con = store.connect(args.db, must_exist=True)
+        try:
+            uid, why = _resolve_uid(con, args.role)
+            if not uid:
+                _say(f"--role: could not identify a role: {why}")
+                return 2
+            jd_text = con.execute("SELECT description FROM roles WHERE uid=?",
+                                  (uid,)).fetchone()["description"] or ""
+        finally:
+            con.close()
+    author = args.author or (claims or {}).get("author")
+    max_pages = args.max_pages if args.max_pages is not None else (claims or {}).get("max_pages")
+
+    results = []
+    for p in paths:
+        results.append((p, cvcheck.check_file(
+            p, claims=claims, master_text=master_text, author_name=author,
+            max_pages=max_pages, claims_problem=problem,
+            contact_email=args.contact_email or (claims or {}).get("email"),
+            jd_text=jd_text)))
+    failed = sum(1 for _, cs in results for c in cs if c.state == cvcheck.FAIL)
+    unmeasured = sum(1 for _, cs in results for c in cs if c.state == cvcheck.UNMEASURED)
+    bad_patterns = (claims or {}).get("bad_patterns") or []
+    if args.json:
+        print(json.dumps([{"path": str(p), "checks": [vars(c) for c in cs]}
+                          for p, cs in results], indent=1))
+    else:
+        mark = {cvcheck.PASS: "PASS", cvcheck.FAIL: "FAIL", cvcheck.UNMEASURED: "----"}
+        for p, cs in results:
+            _say(str(p))
+            for c in cs:
+                _say(f"  {mark[c.state]}  {c.name:<20} {c.detail}".rstrip())
+        for pat, err in bad_patterns:
+            # Once, not once per file: the claims file is what is wrong.
+            _say(f"claims file: pattern {pat!r} does not compile ({err})")
+        _say(f"{len(results)} file(s): {failed} failed, {unmeasured} unmeasured"
+             + (" (counted per check; unmeasured counts against the run)"
+                if unmeasured else ""))
+    return 1 if (failed or unmeasured or bad_patterns) else 0
+
+
+def _mail_label(r: dict) -> str:
+    if r["uid"]:
+        return f"{r['company']} - {r['title'][:40]}"
+    return "(no role matched)"
+
+
+def cmd_mail_sync(args) -> int:
+    """Hiring mail as proposals that wait for a yes.
+
+    Reads a JSON file a person or an assistant wrote from their mailbox, so
+    this command never logs in to anything and never sends. `propose` writes
+    proposals only; a status changes when `apply` names the proposal.
+    """
+    from . import mailsync, store
+    sub = args.mail_cmd
+    if sub == "apply" and not args.ids and not args.all:
+        _say("name the proposals to apply, or pass --all")
+        return 1
+    if sub == "apply" and args.all and args.role:
+        _say("--role names one role and --all applies many: name the proposal ids instead")
+        return 1
+    payload = None
+    if sub == "propose":
+        src = Path(args.source).expanduser()
+        try:
+            payload = json.loads(src.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as e:
+            _say(f"Cannot read the mail file {src}: {e}")
+            return 1
+    con = store.connect(args.db, must_exist=True)
+    try:
+        if sub == "propose":
+            try:
+                s = mailsync.propose(con, payload, allow_partial=args.allow_partial)
+            except ValueError as e:
+                _say(f"Cannot use the mail file {src}: {e}")
+                return 1
+            _say(f"read {s['read']} messages (folders: "
+                 f"{', '.join(s['folders']) or 'none stated'}), {s['proposals']} proposals, "
+                 f"{s['unmatched']} unmatched, {s['other']} other")
+            _say(f"{s['proposals'] + s['unmatched']} new, {s['already_proposed']} already "
+                 f"proposed, {s['already_current']} already current")
+            for f in s["missing"]:
+                _say(f"WARNING: {mailsync._FOLDER_NAMES[f]} was not read; "
+                     + ("rejections are often filed there" if f == "deleteditems"
+                        else "replies are sometimes filed there"))
+            if not s["read"]:
+                _say("WARNING: no messages were read. An empty read is not the same "
+                     "as nothing arriving.")
+            if args.show_other:
+                for m in s["other_messages"]:
+                    _say(f"  other: {m['id']}  {m['subject'][:60]}  [{m['kind']}"
+                         + (f": {m['detail']}" if m["detail"] else "") + "]")
+            if s["partial"] and not args.allow_partial:
+                _say("partial read: exit 3. Read the missing folders, or pass "
+                     "--allow-partial to accept it.")
+                return 3
+            return 0
+        if sub == "list":
+            rows = mailsync.list_proposals(con, state=None if args.all else "pending")
+            if not rows:
+                _say("no pending proposals" if not args.all else "no proposals")
+                return 0
+            for r in rows:
+                arrow = (f"{r['current_status']} -> {r['new_status']}" if r["new_status"]
+                         else f"{r['current_status']} (note: {r['event_kind']})")
+                _say(f"{r['id']:>4}  {_mail_label(r)}  {arrow}  {r['happens_at'] or '?'}"
+                     + (f"  [{r['state']}]" if r["state"] != "pending" else ""))
+                _say(f"      {r['evidence'][:110]}")
+                for w in r["warnings"]:
+                    _say(f"      ! {w}")
+            return 0
+        if sub == "apply":
+            role_uid = None
+            if args.role:
+                role_uid, why = _resolve_uid(con, args.role)
+                if not role_uid:
+                    _say(f"--role: could not identify a role: {why}")
+                    return 1
+            out = mailsync.apply_proposals(con, args.ids, all_clean=args.all,
+                                           role_uid=role_uid)
+            _say(f"applied {len(out['applied'])}"
+                 + (": " + ", ".join(str(i) for i in out["applied"]) if out["applied"] else ""))
+            def _role_label(uid):
+                r = con.execute("SELECT company, title FROM roles WHERE uid=?",
+                                (uid,)).fetchone()
+                return f"{r['company']} - {r['title'][:40]} ({uid})" if r else uid
+            for i, was, now in out["retargeted"]:
+                _say(f"  {i}: applied to {_role_label(now)} instead of {_role_label(was)}, "
+                     f"as --role said")
+            for i, w in out["warned"]:
+                _say(f"  ! {i}: {w}")
+            for i, why in out["skipped"]:
+                _say(f"  skipped {i}: {why}")
+            if out["needs_explicit"]:
+                _say("needs an explicit id (a warning, or no role matched): "
+                     + ", ".join(str(i) for i in out["needs_explicit"]))
+            return 1 if out["skipped"] else 0
+        if sub == "dismiss":
+            out = mailsync.dismiss(con, args.ids)
+            _say(f"dismissed {len(out['dismissed'])}")
+            for i in out["skipped"]:
+                _say(f"  skipped {i}: not pending")
+            return 1 if out["skipped"] else 0
+        return 2
+    finally:
+        con.close()
+
+
+def _whole_days(v: str) -> int:
+    """A number of days, never negative: `--days -3` would otherwise mean
+    "quiet since the future" and list nothing."""
+    try:
+        n = int(v)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{v!r} is not a whole number of days.")
+    if n < 0:
+        raise argparse.ArgumentTypeError(f"{v} is negative; days must be 0 or more.")
+    return n
+
+
+def cmd_followups(args) -> int:
+    """Applications that have gone quiet, with drafts to chase them.
+
+    Writes text files and nothing else: no mail is read or sent from here.
+    """
+    from . import cvcheck, followups, store
+    today = date.today()
+    con = store.connect(args.db, must_exist=True)
+    try:
+        items = followups.quiet(con, today, days=args.days)
+        if not items:
+            _say(f"no applications have gone quiet for {args.days} days or more")
+            _say("drafts only: nothing was sent")
+            return 0
+        _say(f"{len(items)} application(s) with no reply for {args.days} days or more:")
+        for it in items:
+            why = followups.reason_no_draft(it, today)
+            _say(f"  {it['company'][:24]:<24} {it['title'][:38]:<38} {it['silent_days']:>3} days  "
+                 f"{(it['route'] or '-')[:16]:<16} "
+                 f"{'contact' if (it['contact'] or '').strip() else 'no contact':<10} "
+                 f"{('closes ' + it['closes_on']) if it['closes_on'] else '':<18}"
+                 + (f"  [{why}]" if why else "  [can draft]")
+                 + ("  (days counted from an ESTIMATED date)"
+                    if store.is_estimated(it.get("source")) else ""))
+        if args.write is not None:
+            claims, _ = cvcheck.load_claims()
+            author = (claims or {}).get("author") or ""
+            name = args.name or (author.split()[0] if author.split() else None)
+            if not name:
+                _say(f"no --name given and no `author` in the claims file: drafts end "
+                     f"with {followups.PLACEHOLDER_NAME}, which you must replace")
+            out_dir = Path(args.write).expanduser()
+            paths = followups.write_drafts(con, items, out_dir, today, name)
+            for p in paths:
+                _say(f"  wrote {p}")
+            if not paths:
+                _say(f"  nothing written to {out_dir} (every draftable one already exists, "
+                     f"or none can be drafted)")
+        _say("drafts only: nothing was sent")
+        return 0
+    finally:
+        con.close()
+
+
+def cmd_evidence(args) -> int:
+    """The salary research ledger: what was found, where, and when."""
+    from . import store
+    con = store.connect(args.db, must_exist=True)
+    try:
+        if args.evidence_cmd == "add":
+            try:
+                new = store.add_evidence(con, args.company, source=args.source or "",
+                                         figures=args.figures or "", url=args.url or "",
+                                         kind=args.kind, fetched_on=args.fetched_on,
+                                         note=args.note or "")
+            except ValueError as e:
+                _say(str(e))
+                return 1
+            _say(("filed: " if new else "already on file: ")
+                 + store.describe_evidence(store.evidence_for(con, args.company)[0],
+                                           date.today()))
+            return 0
+        rows = store.evidence_for(con, args.company)
+        if not rows:
+            # Absence is stated, not left to look like an empty table.
+            _say(f"no evidence on file for {args.company!r}")
+            return 0
+        for r in rows:
+            _say(store.describe_evidence(r, date.today()))
+        return 0
+    finally:
+        con.close()
+
+
+def cmd_interview(args) -> int:
+    """Write an interview prep pack from what was actually sent.
+
+    No model and no network: the pack is built from the application record.
+    The research half is the interview-prep skill, which reads this file.
+    """
+    from . import interviewprep, runner, store
+    from .state import atomic_write_text
+    con = store.connect(args.db, must_exist=True)
+    try:
+        uid, why = _resolve_uid(con, args.target)
+        if not uid:
+            _say(f"Could not identify a role: {why}")
+            return 1
+        row = con.execute("SELECT uid, company, title FROM roles WHERE uid=?",
+                          (uid,)).fetchone()
+        pack = interviewprep.build_pack(con, uid, args.stage, date.today())
+    finally:
+        con.close()
+    stage_slug = re.sub(r"[^a-z0-9]+", "-", args.stage.lower()).strip("-") or "interview"
+    path = (runner.role_dir(row, args.docs) / f"interview-{stage_slug}.md").resolve()
+    if path.exists() and not args.force:
+        # Never over a file that may now hold the person's own notes.
+        _say(f"{path}  (exists, not overwritten; --force replaces it)")
+        return 0
+    atomic_write_text(path, pack)
+    _say(str(path))
+    return 0
+
+
+def cmd_import_applications(args) -> int:
+    """Bring the statuses and handoff files already on disk into the
+    application record. A dry run unless `--apply` is given."""
+    from . import importer, store
+    if args.handoff:
+        handoffs = [Path(h).expanduser() for h in args.handoff]
+    else:
+        # No default folder is assumed: this tool is public and a folder of
+        # somebody's own notes is theirs to name. $JOB_RADAR_HANDOFF_DIR names
+        # one; otherwise only the statuses already in the database are read.
+        # A folder that does not exist is not an error. A path the person
+        # NAMED that cannot be read is.
+        env = os.environ.get("JOB_RADAR_HANDOFF_DIR", "").strip()
+        folder = Path(env).expanduser() if env else None
+        handoffs = (sorted(folder.glob("applications-*.md"))
+                    if folder is not None and folder.is_dir() else [])
+    con = store.connect(args.db, must_exist=True)
+    try:
+        try:
+            plan = importer.build_plan(con, handoffs)
+        except (OSError, ValueError) as e:
+            _say(f"Cannot read a handoff file: {e}")
+            return 1
+        _say(f"{len(handoffs)} handoff file(s) read: "
+             + (", ".join(h.name for h in handoffs) or "none found"))
+        for p in plan.rows:
+            r = con.execute("SELECT company, title FROM roles WHERE uid=?",
+                            (p.uid,)).fetchone()
+            _say(f"  {p.uid[:8]}  {r['company'][:22]:<22} {r['title'][:36]:<36} "
+                 f"{p.applied_on}  {p.route[:24]:<24} {p.source}"
+                 + ("  ESTIMATED" if p.estimated else ""))
+        if plan.unmatched:
+            _say("not in database:")
+            for u in plan.unmatched:
+                _say(f"  {u['company']}  {u['role']}  ({u['why']})")
+        if plan.already_recorded:
+            _say(f"already recorded: {plan.already_recorded}")
+        estimated = sum(1 for p in plan.rows if p.estimated)
+        if estimated:
+            _say(f"{estimated} date(s) are ESTIMATED from when the status last "
+                 f"changed, not from when the application went in.")
+        if not args.apply:
+            _say(f"dry run: re-run with --apply to write {len(plan.rows)} applications")
+            return 0
+        out = importer.apply_plan(con, plan.rows)
+        _say(f"wrote {out['written']}, skipped {out['skipped']}")
         return 0
     finally:
         con.close()
@@ -2345,6 +2863,18 @@ def cmd_generate(args) -> int:
             _say("Draft the CV first: the letter is checked against it for "
                  "repeated phrasing.")
             return 1
+        # Before anything is queued. Brightwell was applied for twice, a week
+        # apart, because nothing here asked whether the job had already gone.
+        refusal = store.duplicate_refusal(con, uid, args.kind)
+        if refusal:
+            sentences, any_same = refusal
+            for s in sentences:
+                _say("  " + s)
+            if not args.force:
+                _say("  Drafting a CV for it spends tokens for nothing. Use "
+                     "--force to draft anyway." if any_same else
+                     "  If this is a different job, use --force.")
+                return 1
         row = con.execute("SELECT company, title, description FROM roles "
                           "WHERE uid=?", (uid,)).fetchone()
         # Screening a posting with no body spends money to be told there is
@@ -2368,7 +2898,7 @@ def cmd_generate(args) -> int:
     # config.yaml happens to be next to it. That is how a nurse's role came
     # back screened against the author's job titles.
     runner.run_job(job_id, db_path=args.db, base=args.docs,
-                   config_path=args.config)
+                   config_path=args.config, review=getattr(args, "review", False))
 
     con = store.connect(args.db)
     try:
@@ -2390,6 +2920,10 @@ def cmd_generate(args) -> int:
                 if gates:
                     bad = [k for k, v in gates.items() if v is False]
                     _say(f"  gates: {'all passed' if not bad else 'FAILED ' + ', '.join(bad)}")
+                    if gates.get("review_error"):
+                        _say(f"  reviewer did not run: {gates['review_error']}")
+                    for f in gates.get("review_findings") or []:
+                        _say(f"  review: {f}")
                 break
         return 0
     finally:
@@ -2397,6 +2931,23 @@ def cmd_generate(args) -> int:
 
 
 # ---------------------------------------------------------------- enrich
+def _read_closing_dates(con, reread: bool = False) -> None:
+    """Read closing dates out of stored descriptions and say what happened.
+
+    All four counts, always. "Found nothing" and "could not read it" are
+    different answers: a posting that names a date next to the word closes and
+    still came back blank is a deadline somebody may miss, and one summary
+    number would hide it.
+    """
+    from . import store
+    out = store.backfill_closing_dates(con, rederive=reread)
+    if reread:
+        _say(f"closing dates re-read: {out['changed']} changed, {out['cleared']} cleared "
+             f"(read by the parser only; dates set by hand are kept)")
+    _say(f"closing dates: {out['set']} read, {out['ambiguous']} ambiguous "
+         f"(left blank), {out['no_text']} postings had no text")
+
+
 def cmd_enrich(args) -> int:
     """Fill in descriptions for roles whose source only returned a headline."""
     from . import enrich, store
@@ -2407,6 +2958,8 @@ def cmd_enrich(args) -> int:
         if not rows:
             _say("Nothing to fetch. Every role on the board already has its "
                  "description.")
+            if not args.dry_run:
+                _read_closing_dates(con)
             return 0
         serial = args.pause is not None
         workers = 1 if serial else (args.concurrency
@@ -2441,6 +2994,7 @@ def cmd_enrich(args) -> int:
             if dropped:
                 _say(f"  {dropped} role(s) failed a rule once their text was "
                      f"readable and have been hidden")
+        _read_closing_dates(con)
         return 0
     finally:
         con.close()
@@ -2561,7 +3115,19 @@ def cmd_rescreen(args) -> int:
             "r.description, r.salary_min, r.salary_max, r.salary_currency, "
             "r.salary_period, r.salary_confirmed, r.salary_label, "
             "r.city, r.country, r.work_mode, r.employment, "
-            "COALESCE(s.status,'new') st "
+            # A role with an application on file counts as acted on even if
+            # its status says "new": the application tables cascade from
+            # `roles`, so deleting the row deletes the only record that an
+            # application went in. The same for any event (an employer's
+            # "you already applied" is an `acknowledged` event on a role
+            # still at new) and any mail proposal, which has no foreign key
+            # and would be stranded on an id that no longer exists.
+            "CASE WHEN COALESCE(s.status,'new')='new' AND ("
+            "EXISTS (SELECT 1 FROM applications a WHERE a.uid=r.uid) OR "
+            "EXISTS (SELECT 1 FROM app_events e WHERE e.uid=r.uid) OR "
+            "EXISTS (SELECT 1 FROM mail_proposals m WHERE m.uid=r.uid "
+            "AND m.state='pending')) "
+            "THEN 'recorded' ELSE COALESCE(s.status,'new') END st "
             "FROM roles r LEFT JOIN role_state s ON s.uid=r.uid").fetchall()
         stale, kept_by_status = [], []
         rederived = 0
@@ -2712,6 +3278,7 @@ def cmd_rescreen(args) -> int:
             (kept_by_status if r["st"] not in ("new", "") else stale).append(r)
 
         con.commit()
+        _read_closing_dates(con, reread=getattr(args, "reread_closing_dates", False))
         if rederived:
             # Said whatever the verdict is, and said first, because it is the
             # only thing this command CHANGES on a database where every role
@@ -2738,11 +3305,32 @@ def cmd_rescreen(args) -> int:
             _say(f"\n  Nothing was removed. `job-radar rescreen --remove` deletes "
                  f"the {len(stale)} untouched ones.")
             return 0
-        for r in stale:
-            con.execute("DELETE FROM role_state WHERE uid=?", (r["uid"],))
-            con.execute("DELETE FROM roles WHERE uid=?", (r["uid"],))
-        con.commit()
-        _say(f"\n  Removed {len(stale)}. Kept {len(kept_by_status)} you had acted on.")
+        # Checked again at the moment of deleting, inside one write lock. The
+        # list above was read earlier, and an application recorded since (a
+        # dashboard click while this ran) cascades away with the role.
+        removed = 0
+        con.execute("BEGIN IMMEDIATE")
+        try:
+            for r in stale:
+                untouched = con.execute(
+                    "SELECT 1 FROM roles r LEFT JOIN role_state s ON s.uid=r.uid "
+                    "WHERE r.uid=? AND COALESCE(s.status,'new')='new' "
+                    "AND NOT EXISTS (SELECT 1 FROM applications a WHERE a.uid=r.uid) "
+                    "AND NOT EXISTS (SELECT 1 FROM app_events e WHERE e.uid=r.uid) "
+                    "AND NOT EXISTS (SELECT 1 FROM mail_proposals m WHERE m.uid=r.uid "
+                    "AND m.state='pending')", (r["uid"],)).fetchone()
+                if not untouched:
+                    continue
+                con.execute("DELETE FROM role_state WHERE uid=?", (r["uid"],))
+                con.execute("DELETE FROM roles WHERE uid=?", (r["uid"],))
+                removed += 1
+            con.execute("COMMIT")
+        except BaseException:
+            con.execute("ROLLBACK")
+            raise
+        late = len(stale) - removed
+        _say(f"\n  Removed {removed}. Kept {len(kept_by_status) + late} you had acted on"
+             + (f" ({late} since this command started)" if late else "") + ".")
         return 0
     finally:
         con.close()
@@ -2855,6 +3443,16 @@ def cmd_list(args) -> int:
         # A role with no link is seen-set history, not a listing. See
         # store.ACTIONABLE_SQL.
         where.append(store.ACTIONABLE_SQL)
+        today = date.today()
+        # getattr: callers outside the parser build this namespace by hand, as
+        # tests/test_closure_is_visible.py does, and a new flag must not break them.
+        within = getattr(args, "closing_within", None)
+        if within is not None:
+            # Dates computed here, not by SQLite's date('now'), which is UTC:
+            # an evening in BST would ask about tomorrow's window.
+            where.append("r.closes_on BETWEEN ? AND ?")
+            params += [today.isoformat(),
+                       (today + timedelta(days=within)).isoformat()]
         if where:
             q += " WHERE " + " AND ".join(f"({w})" for w in where)
         q += " ORDER BY r.score DESC, r.company COLLATE NOCASE"
@@ -2902,6 +3500,9 @@ def cmd_list(args) -> int:
             _say(f"{r['score']:>5.0f}  {r['title'][:52]:<52} {r['company'][:22]:<22}"
                  f"  {r['salary_label'] or 'unconfirmed':<20}{status}")
             _say(f"       {r['uid']}  {r['location'][:60]}")
+            when = deadlines.caption(r["closes_on"], r["status"], today)
+            if when:
+                _say(f"       {when}")
             if r["source_state"] == "unknown":
                 _say(f"       last listed {r['last_seen']}; its source has "
                      f"not been read successfully since, so whether this is "
@@ -3160,14 +3761,160 @@ def build_parser() -> argparse.ArgumentParser:
 
     ap = sub.add_parser("applied", help="record what happened with a role")
     ap.add_argument("target", help="a posting URL, a company name, or a uid")
-    ap.add_argument("-s", "--status", default="applied",
+    ap.add_argument("-s", "--status", default=None,
                     help="new|interested|applied|submitted|interviewing|offer|"
-                         "rejected|withdrawn|skipped|closed")
+                         "rejected|withdrawn|skipped|closed (default applied, "
+                         "unless only --closes is given)")
     ap.add_argument("--note", default=None,
                    help="free text kept against the role, shown by `list` and "
                         "on the dashboard. Pass an empty string to clear one.")
+    ap.add_argument("--date", default=None, metavar="YYYY-MM-DD",
+                    help="the day it happened (default today): the day the "
+                         "application went in, or the day of the rejection, "
+                         "interview or offer")
+    ap.add_argument("--route", default=None,
+                    help="how it was sent: jobylon, LinkedIn Easy Apply, an email")
+    ap.add_argument("--ref", default=None,
+                    help="the reference or job id the employer gave")
+    ap.add_argument("--cv", default=None, help="path of the CV that was sent")
+    ap.add_argument("--cover", default=None,
+                    help="path of the cover letter that was sent")
+    ap.add_argument("--salary", default=None,
+                    help="the salary figure you gave, if the form asked")
+    ap.add_argument("--contact", default=None,
+                    help="who to chase: a name and address")
+    ap.add_argument("--closes", default=None, metavar="YYYY-MM-DD",
+                    help="when the posting closes, if you know and the text "
+                         "did not say")
+    ap.add_argument("--set", dest="overwrite", action="store_true",
+                    help="on an application already on file, replace a route, "
+                         "reference, contact, CV, cover or salary that differs "
+                         "(without it only blanks are filled)")
     ap.add_argument("--db", default=None, help=_DB_HELP)
     ap.set_defaults(func=cmd_applied)
+
+    cc = sub.add_parser("cvcheck",
+                        help="lint a CV or cover letter, however it was made")
+    cc.add_argument("paths", nargs="+", metavar="PATH",
+                    help="a .md, .txt, .docx or .pdf file. Every path must exist.")
+    cc.add_argument("--master", default=None,
+                    help="the CV the claims must come from, to catch figures "
+                         "it does not contain")
+    cc.add_argument("--claims", default=None,
+                    help="claims file (default claims.local.yaml, then "
+                         "claims.yaml). See claims.example.yaml.")
+    cc.add_argument("--author", default=None,
+                    help="the name the file properties should carry")
+    cc.add_argument("--max-pages", type=int, default=None,
+                    help="the most pages a PDF may have")
+    cc.add_argument("--contact-email", default=None,
+                    help="the address a PDF must carry as literal text "
+                         "(or `email` in the claims file)")
+    cc.add_argument("--role", default=None, metavar="TARGET",
+                    help="a posting URL, company name or uid: its description is "
+                         "compared with the CV for keyword gaps. A gap is shown, "
+                         "never a failure.")
+    cc.add_argument("--db", default=None, help=_DB_HELP)
+    cc.add_argument("--json", action="store_true", help="print the checks as JSON")
+    cc.set_defaults(func=cmd_cvcheck)
+
+    ev = sub.add_parser("evidence", help="the salary research ledger, with dates")
+    evsub = ev.add_subparsers(dest="evidence_cmd", required=True)
+    ea = evsub.add_parser("add", help="file a researched figure")
+    ea.add_argument("company", help="the employer; MARLOW & STONE and m & s are one")
+    ea.add_argument("--source", default=None, help="where the figure came from (required)")
+    ea.add_argument("--figures", default=None,
+                    help='what it says, e.g. "GBP 95-120k, Senior Manager" (required)')
+    ea.add_argument("--url", default=None, help="the page it was read on")
+    ea.add_argument("--kind", default="salary", help="what sort of evidence (default salary)")
+    ea.add_argument("--fetched-on", default=None, metavar="YYYY-MM-DD",
+                    help="the day it was read (default today)")
+    ea.add_argument("--note", default=None, help="anything worth remembering about it")
+    ea.add_argument("--db", default=None, help=_DB_HELP)
+    es = evsub.add_parser("show", help="what is on file for an employer, and how old it is")
+    es.add_argument("company", help="the employer")
+    es.add_argument("--db", default=None, help=_DB_HELP)
+    ev.set_defaults(func=cmd_evidence)
+
+    iv = sub.add_parser("interview",
+                        help="an interview prep pack from what was actually sent "
+                             "(no model, no network)")
+    iv.add_argument("target", help="a posting URL, a company name, or a uid")
+    iv.add_argument("--stage", default="interview",
+                    help='"recruiter screen", "hiring manager" or "technical" '
+                         "chooses the questions (default: general)")
+    iv.add_argument("--docs", default=None,
+                    help="where documents are kept (default $JOB_RADAR_DOCS, or "
+                         "~/job-applications)")
+    iv.add_argument("--force", action="store_true",
+                    help="replace the pack if it already exists")
+    iv.add_argument("--db", default=None, help=_DB_HELP)
+    iv.set_defaults(func=cmd_interview)
+
+    fu = sub.add_parser("followups",
+                        help="applications with no reply, and drafts to chase them "
+                             "(nothing is sent)")
+    fu.add_argument("--days", type=_whole_days, default=10,
+                    help="how many days without a reply counts as quiet (default 10)")
+    fu.add_argument("--write", nargs="?", const=str(Path("~/job-applications/followups")),
+                    default=None, metavar="DIR",
+                    help="write a text draft per application that can fairly be "
+                         "chased (default folder ~/job-applications/followups). "
+                         "Without it nothing is written.")
+    fu.add_argument("--name", default=None,
+                    help="the name the draft is signed with (default: `author` in "
+                         "the claims file, else a [your name] placeholder)")
+    fu.add_argument("--db", default=None, help=_DB_HELP)
+    fu.set_defaults(func=cmd_followups)
+
+    ms = sub.add_parser("mail-sync",
+                        help="hiring mail as proposals that wait for your yes")
+    mssub = ms.add_subparsers(dest="mail_cmd", required=True)
+    mp = mssub.add_parser("propose", help="read a mailbox export into proposals; "
+                          "changes no role")
+    mp.add_argument("--from", dest="source", required=True, metavar="FILE",
+                    help="JSON: {folders_read, since, messages: [{id, folder, "
+                         "received, subject, sender, body}]}")
+    mp.add_argument("--allow-partial", action="store_true",
+                    help="exit 0 even if Deleted Items or Junk Email were not read, "
+                         "or nothing was. Said on screen either way.")
+    mp.add_argument("--show-other", action="store_true",
+                    help="list messages that were ambiguous or not about a status")
+    mp.add_argument("--db", default=None, help=_DB_HELP)
+    ml = mssub.add_parser("list", help="the proposals waiting for a decision")
+    ml.add_argument("--all", action="store_true", help="include applied and dismissed")
+    ml.add_argument("--db", default=None, help=_DB_HELP)
+    ma = mssub.add_parser("apply", help="apply the proposals you name")
+    ma.add_argument("ids", nargs="*", type=int, metavar="ID",
+                    help="the proposal ids from `mail-sync list` to apply")
+    ma.add_argument("--all", action="store_true",
+                    help="apply every pending proposal that has a role and no warning")
+    ma.add_argument("--role", default=None, metavar="TARGET",
+                    help="which role a proposal with no match is about")
+    ma.add_argument("--db", default=None, help=_DB_HELP)
+    md = mssub.add_parser("dismiss", help="drop proposals for good")
+    md.add_argument("ids", nargs="+", type=int, metavar="ID",
+                    help="the proposal ids from `mail-sync list` to drop for good")
+    md.add_argument("--db", default=None, help=_DB_HELP)
+    ms.set_defaults(func=cmd_mail_sync)
+
+    ia = sub.add_parser("import-applications",
+                        help="bring statuses and handoff files into the "
+                             "application record (dry run unless --apply)")
+    ia.add_argument("--apply", action="store_true",
+                    help="write the plan. Without it nothing is written.")
+    ia.add_argument("--handoff", action="append", default=None, metavar="PATH",
+                    help="a markdown file with a | Role | Company | Route | CV | "
+                         "table, dated by its title or filename. Repeatable. "
+                         "Default: applications-*.md in $JOB_RADAR_HANDOFF_DIR, if set")
+    ia.add_argument("--db", default=None, help=_DB_HELP)
+    ia.set_defaults(func=cmd_import_applications)
+
+    hi = sub.add_parser("history",
+                        help="what happened with a role, and where each fact came from")
+    hi.add_argument("target", help="a posting URL, a company name, or a uid")
+    hi.add_argument("--db", default=None, help=_DB_HELP)
+    hi.set_defaults(func=cmd_history)
 
     g = sub.add_parser("generate", help="screen a role, or draft a CV or cover letter")
     g.add_argument("target", help="a posting URL, a company name, or a uid")
@@ -3177,8 +3924,12 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--docs", default=None,
                    help="where the CV or cover letter is written "
                         "(default $JOB_RADAR_DOCS, or ~/job-applications)")
+    g.add_argument("--review", action="store_true",
+                   help="also run a second agent over the finished draft "
+                        "(spends more tokens)")
     g.add_argument("--force", action="store_true",
-                   help="screen even when the posting has no description")
+                   help="screen even when the posting has no description, or "
+                        "draft even though it looks already applied for")
     g.set_defaults(func=cmd_generate)
 
     en = sub.add_parser("enrich",
@@ -3223,6 +3974,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="delete the ones that no longer match and that you "
                          "have not acted on")
     rs.add_argument("--limit", type=_limit, default=0, help="how many to list")
+    rs.add_argument("--reread-closing-dates", action="store_true",
+                    help="read again every closing date the parser stored, so a "
+                         "fixed parser corrects it; dates set by hand are kept")
     rs.add_argument("--db", default=None, help=_DB_HELP)
     rs.set_defaults(func=cmd_rescreen)
 
@@ -3258,6 +4012,11 @@ def build_parser() -> argparse.ArgumentParser:
     ls.add_argument("--limit", type=_limit, default=0,
                     help="print at most N roles, best score first. 0 prints "
                          "all of them.")
+    ls.add_argument("--closing-within", type=_limit, default=None, metavar="DAYS",
+                    help="only roles with a closing date from today to DAYS "
+                         "days away. A role whose closing date could not be "
+                         "read is not in this list, which is not the same as "
+                         "having no deadline.")
     ls.add_argument("--json", action="store_true",
                     help="print the same roles as JSON, one object each, with "
                          "their notes and generated documents attached")

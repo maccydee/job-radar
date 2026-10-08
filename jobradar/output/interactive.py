@@ -11,7 +11,7 @@ import html as _h
 import json
 from urllib.parse import quote
 from collections import Counter
-from datetime import datetime
+from datetime import date, datetime
 
 from .. import closure, employment, store
 from .favicon import link_tag as _favicon_tag, mark as _favicon_mark
@@ -195,6 +195,8 @@ _EXTRA_CSS = """
 .docs .rating{color:var(--pay);font-weight:600;font-variant-numeric:tabular-nums}
 .docs .gatefail{color:var(--flag)}
 .err{grid-column:1/-1;font-size:.8125rem;color:var(--flag);margin-top:var(--s2)}
+.err button{border:1px solid var(--flag);background:var(--surface);color:var(--flag);
+  font:inherit;font-weight:500;padding:4px 10px;border-radius:var(--r-md);cursor:pointer}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
   background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:var(--r-pill);
   font-size:.875rem;box-shadow:var(--shadow-up);opacity:0;pointer-events:none;
@@ -963,9 +965,21 @@ document.addEventListener('click', async e=>{
       const name={screen:'screening',cv:'CV',cover_letter:'cover letter'}[kind]||kind;
       if(!confirm('Draft this '+name+' again?\n\nThere is one on file already. '
                   +'This spends tokens and replaces it.')) return; }
-    const {ok,data}=await post('/api/generate',{uid,kind});
+    const force=gen.dataset.force==='1';
+    delete gen.dataset.force;
+    const {ok,data}=await post('/api/generate',force?{uid,kind,force:true}:{uid,kind});
     const err=row.querySelector('.err');
     if(!ok){ err.hidden=false; err.textContent=data.error||'could not start';
+             // Already applied for: the refusal names the earlier application,
+             // and this is the one way to override it from the page. It used
+             // to say "send force: true" to someone with nothing to send it.
+             if(data.duplicate){
+               const again=document.createElement('button');
+               again.type='button';
+               again.textContent='Draft anyway';
+               again.addEventListener('click',ev=>{ev.stopPropagation();
+                 gen.dataset.force='1'; err.hidden=true; gen.click();});
+               err.append(' ',again);}
              say(data.error||'could not start',5000); return;}
     err.hidden=true;
     gen.classList.add('busy'); gen.disabled=true;
@@ -1470,6 +1484,28 @@ def _flags(row) -> list:
     return out if isinstance(out, list) else []
 
 
+def _short_date(iso: str) -> str:
+    """"2026-10-23" as "23 Oct". Anything that is not a date comes back as it
+    was, so a bad value shows up on the page instead of vanishing."""
+    try:
+        d = datetime.strptime(iso, "%Y-%m-%d")
+    except (TypeError, ValueError):
+        return str(iso)
+    return f"{d.day} {d.strftime('%b')}"
+
+
+def _closing_note(iso: str, today: date) -> str:
+    """"Closes 23 Oct", "Closed 30 Sep", with the year when it is not this
+    one. A past date said "Closes" and a date a year out looked like this
+    month's, so a deadline eleven months wrong read as a live one."""
+    try:
+        d = date.fromisoformat(iso)
+    except (TypeError, ValueError):
+        return "Closes " + str(iso)
+    text = _short_date(iso) + ("" if d.year == today.year else f" {d.year}")
+    return ("Closed " if d < today else "Closes ") + text
+
+
 def _row(r, arts, job, run=0, eager=True) -> str:
     settled = r["status"] in store.SETTLED
     paid = bool(r["salary_confirmed"])
@@ -1598,6 +1634,10 @@ def _row(r, arts, job, run=0, eager=True) -> str:
     caption = _STATE_NOTES.get(_source_state(r))
     if caption:
         notes.append(caption.format(last_seen=r["last_seen"]))
+    # A posting that says when it closes. Absent (not "never") when nothing
+    # could be read, so there is no "no deadline" claim to be wrong.
+    if "closes_on" in r.keys() and r["closes_on"]:
+        notes.append(_closing_note(r["closes_on"], date.today()))
     busy = job["kind"] if job else ""
     has_cv = "cv" in arts
 

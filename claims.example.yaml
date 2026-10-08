@@ -1,0 +1,30 @@
+# Rules for `job-radar cvcheck`, written down once so every CV and letter is
+# checked against them, wherever it was made.
+#
+# Copy this to claims.local.yaml and fill it in. The real file is gitignored
+# (*.local.yaml): it names things you have decided you cannot claim, which is
+# personal, and this repository is public.
+#
+# A missing or empty file is not a pass. cvcheck reports the banned-phrase
+# check as unmeasured and exits non-zero, because "no rules" and "no breaches"
+# are different answers. To say there is nothing to ban, write `banned: []`.
+
+# The name the file properties should carry. A blank or different author is
+# what a recruiter notices when they open the properties.
+author: Your Name
+
+# The address the PDF must carry as text. An ATS reads the text layer, and an
+# email drawn as an icon is invisible to it.
+email: you@example.com
+
+# The most pages a PDF may have.
+max_pages: 2
+
+# Phrases that must not appear. Each is a regular expression, matched without
+# regard to case against every line, with the reason it is banned, so the
+# report can say why rather than only where.
+banned:
+  - pattern: "\\bnear zero\\b"
+    why: "say the real figure, or say nothing"
+  - pattern: "\\bsingle-handedly\\b"
+    why: "a claim of sole credit that a reference could contradict"
