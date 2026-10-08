@@ -28,7 +28,7 @@ def make_pdf(path, lines: list[str], *, pages: int = 1, author: str | None = Non
     font = add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
     kids = []
     for _ in range(pages):
-        text = "".join(f"Bluetree /F1 10 Tf 40 {780 - 14 * i} Td ({_esc(ln)}) Tj ET\n"
+        text = "".join(f"BT /F1 10 Tf 40 {780 - 14 * i} Td ({_esc(ln)}) Tj ET\n"
                        for i, ln in enumerate(lines))
         stream = text.encode("latin-1")
         content = add(b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"endstream")

@@ -215,20 +215,20 @@ def test_apply_writes_once_and_changes_no_status_or_note():
 def test_an_explicit_handoff_that_cannot_be_read_stops_the_command():
     cfg, db = _cli_db()
     code, out = _run(cfg, "import-applications", "--db", str(db), "--handoff", "/nonexistent/x.md")
-    assert code == 1 and "/nonexistent/x.md" in out, out
+    assert code == 1 and str(Path("/nonexistent/x.md")) in out, out
     con = store.connect(db)
     assert con.execute("SELECT COUNT(*) FROM applications").fetchone()[0] == 0
 
 
 def test_a_route_that_is_a_web_address_keeps_its_dots():
-    """The first real run read "via jobs.bt.com" as the route "jobs": the stop
+    """The first real run read "via jobs.bluetree.com" as the route "jobs": the stop
     at a full stop cut the address at its first dot."""
     con = store.connect(":memory:")
     _role(con, "Bluetree", "Software Engineering Manager", "applied",
-          "Applied 6 Oct 2026 via jobs.bt.com. Closes 9 Oct.")
+          "Applied 6 Oct 2026 via jobs.bluetree.com. Closes 9 Oct.")
     _role(con, "Acme", "EM", "applied", "Applied 6 Oct 2026 via Greenhouse. Awaiting reply.")
     routes = sorted(p.route for p in importer.plan_from_state(con))
-    assert routes == ["Greenhouse", "jobs.bt.com"], routes
+    assert routes == ["Greenhouse", "jobs.bluetree.com"], routes
 
 
 # ------------------------------------- review finding 6: future interview dates
@@ -246,7 +246,7 @@ def test_an_upcoming_interview_is_not_moved_back_a_year_and_does_not_date_the_ap
 
 def test_an_interview_after_a_stated_application_is_filed_after_it():
     con = store.connect(":memory:")
-    _role(con, "Bluetree", "EM", "interviewing", "Applied 30 Sep via jobs.bt.com. Interview 12 Oct",
+    _role(con, "Bluetree", "EM", "interviewing", "Applied 30 Sep via jobs.bluetree.com. Interview 12 Oct",
           updated="2026-10-08")
     (row,) = importer.plan_from_state(con)
     assert (row.applied_on, row.final_on) == ("2026-09-30", "2026-10-12"), row
