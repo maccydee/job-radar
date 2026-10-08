@@ -4111,6 +4111,9 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv=None) -> int:
     from .store import StoreError
     args = build_parser().parse_args(argv)
+    if args.cmd in ("scan", "validate", "seed", "discover", "enrich"):
+        from .fdlimit import raise_file_limit
+        raise_file_limit()
     try:
         # Before the command, so it is read rather than scrolled past at the
         # end of two hundred lines of scan output.
