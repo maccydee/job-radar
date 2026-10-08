@@ -32,19 +32,22 @@ def test_the_text_of_a_real_pdf_comes_back_readable():
 def test_each_extractor_reads_the_same_pdf_on_its_own():
     p = _pdf()
     real = pdftext._have_pypdf, pdftext._have_pdftotext
+    # Called, not just read: these are functions, so `if real[0]` was true on
+    # a machine with neither tool and the test then failed on a None result.
+    have = real[0](), real[1]()
     try:
-        if real[0]:
+        if have[0]:
             pdftext._have_pdftotext = lambda: False
             text, how = pdftext.extract(p)
             assert how == "pypdf" and "alex@example.com" in text, (text, how)
-        if real[1]:
+        if have[1]:
             pdftext._have_pdftotext = real[1]
             pdftext._have_pypdf = lambda: False
             text, how = pdftext.extract(p)
             assert how == "pdftotext" and "alex@example.com" in text, (text, how)
     finally:
         pdftext._have_pypdf, pdftext._have_pdftotext = real
-    if not any(real):
+    if not any(have):
         raise unittest.SkipTest("no PDF extractor installed")
 
 

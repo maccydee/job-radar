@@ -215,7 +215,7 @@ def test_apply_writes_once_and_changes_no_status_or_note():
 def test_an_explicit_handoff_that_cannot_be_read_stops_the_command():
     cfg, db = _cli_db()
     code, out = _run(cfg, "import-applications", "--db", str(db), "--handoff", "/nonexistent/x.md")
-    assert code == 1 and str(Path("/nonexistent/x.md")) in out, out
+    assert code == 1 and "x.md" in out and "Cannot read" in out, out
     con = store.connect(db)
     assert con.execute("SELECT COUNT(*) FROM applications").fetchone()[0] == 0
 
