@@ -3549,6 +3549,22 @@ def _csv_list(raw: str | None) -> list[str]:
     return [x.strip() for x in re.split(r"[,\s]+", raw or "") if x.strip()]
 
 
+def cmd_install_skills(args) -> int:
+    """Copy the skills this checkout ships into Claude Code's skills folder."""
+    from . import skills_install
+    dest = Path(args.dest).expanduser() if args.dest else skills_install.default_dest()
+    _say(f"Skills -> {dest}")
+    code = skills_install.report(skills_install.install_skills(dest=dest), _say)
+    if getattr(args, "fetch_natural_writing", False):
+        code = skills_install.report([skills_install.fetch_natural_writing(dest=dest)], _say) or code
+    elif not skills_install.natural_writing_present(dest):
+        _say("  note: drafting a CV or cover letter also needs natural-writing, a separate "
+             "repository. Add --fetch-natural-writing to download it with git.")
+    if code:
+        _say("At least one skill could not be copied; see above.")
+    return code
+
+
 def cmd_setup(args) -> int:
     import inspect
 
@@ -3570,6 +3586,13 @@ def cmd_setup(args) -> int:
     # wizard predates the flag says so rather than fetching 130MB nobody
     # asked for, or silently not fetching what somebody did.
     extra["seed"] = not getattr(args, "no_seed", False)
+    # Only passed when asked for, so a wizard that predates it is not handed a
+    # keyword it cannot take. None means "ask", which only the interactive
+    # wizard does; scripts install nothing unless this is given.
+    if getattr(args, "install_skills", False):
+        extra["install_skills"] = True
+    if getattr(args, "fetch_natural_writing", False):
+        extra["fetch_natural_writing"] = True
     # Checked against the wizard rather than assumed, because the two halves
     # of these flags live in different modules -- the flag is declared here
     # and the answer is written there -- and a namespace that does not match
@@ -4061,7 +4084,26 @@ def build_parser() -> argparse.ArgumentParser:
                    help="currency your salary floor is in, e.g. USD. With "
                         "--defaults this is the only way to say so: it wrote "
                         "GBP for everybody.")
+    w.add_argument("--install-skills", action="store_true",
+                   help="also copy the skills this repo ships into "
+                        "~/.claude/skills. The interactive wizard asks; "
+                        "scripts install nothing unless given this.")
+    w.add_argument("--fetch-natural-writing", action="store_true",
+                   help="with --install-skills, also download natural-writing "
+                        "(a separate repository the drafting jobs need) with git")
     w.set_defaults(func=cmd_setup)
+
+    ik = sub.add_parser("install-skills",
+                        help="copy the shipped skills where Claude Code finds them")
+    ik.add_argument("--dest", default=None,
+                    help="where to copy them (default: $CLAUDE_SKILLS_DIR, or "
+                         "~/.claude/skills). A skill already there that "
+                         "differs is left alone and reported.")
+    ik.add_argument("--fetch-natural-writing", action="store_true",
+                    help="also download natural-writing with git. It is a "
+                         "separate repository; drafting a CV or cover letter "
+                         "needs it.")
+    ik.set_defaults(func=cmd_install_skills)
 
     return p
 

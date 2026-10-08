@@ -45,8 +45,21 @@ working directory, so a fresh clone can screen and draft with no setup step.
 It looks in `~/.claude/skills` first and falls back to here, so a skill you
 have edited yourself is the one that gets used.
 
-To use them in Claude Code generally, copy them where Claude Code looks:
+To use them in Claude Code from any folder, they need to be in
+`~/.claude/skills`. `job-radar setup` asks whether to copy them there, and
+`job-radar install-skills` does it at any time (`--dest` names another folder).
 
 ```bash
-cp -r skills/rate-cv ~/.claude/skills/
+job-radar install-skills
 ```
+
+It never overwrites: a skill already there that differs from the one shipped
+here is reported and left alone, and a copy that could not be made is reported
+and makes the command exit non-zero. Scripted setups install nothing unless
+given `setup --defaults --install-skills`.
+
+`natural-writing` (see above) is a separate repository, so it is asked about
+separately: setup offers to download it with `git` when it is missing, and
+`install-skills --fetch-natural-writing` (or `setup --install-skills
+--fetch-natural-writing`) does it without a question. It is the only step that
+downloads anything, and a folder already there is never replaced.

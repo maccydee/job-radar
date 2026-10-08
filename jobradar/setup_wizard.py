@@ -642,10 +642,39 @@ def ask_cv(existing: str = "") -> str:
         print(f"   Nothing at {p}. Check the path and try again.")
 
 
+def offer_skills(ask_yn=None, dest=None, say=print) -> int:
+    """Ask whether to copy the shipped skills where Claude Code looks, and do it.
+
+    Asked, never assumed: it writes into the user's home folder, outside the
+    checkout. Nothing already there is overwritten, and the answer is "yes" by
+    default only because the copy is harmless and `generate` works either way.
+    Returns 1 if a copy failed, so a scripted caller can see it.
+    """
+    from . import skills_install
+    ask_yn = ask_yn or _ask_yn
+    names = ", ".join(skills_install.available()) or "none found"
+    say(f"\nClaude Code can use job-radar's skills ({names}) from any folder.")
+    if not ask_yn("   Copy them into ~/.claude/skills so it can? Nothing already "
+                  "there is overwritten", True):
+        say("   Skipped. `job-radar install-skills` does it any time.")
+        return 0
+    rc = skills_install.report(skills_install.install_skills(dest=dest), say)
+    if not skills_install.natural_writing_present(dest):
+        say("\nDrafting a CV or cover letter also needs natural-writing, which is a "
+            "separate repository.")
+        if ask_yn("   Download it with git into the same folder? It is fetched from "
+                  f"{skills_install.NATURAL_WRITING_URL}", True):
+            rc = skills_install.report([skills_install.fetch_natural_writing(dest=dest)], say) or rc
+        else:
+            say("   Skipped. `job-radar install-skills --fetch-natural-writing` does it any time.")
+    return rc
+
+
 def run(path: Path, non_interactive: bool = False, cv: str | None = None,
         titles: str | None = None, scan: bool = False,
         countries: list | None = None, currency: str | None = None,
-        seed: bool = True) -> int:
+        seed: bool = True, install_skills: bool | None = None,
+        fetch_natural_writing: bool = False) -> int:
     """Build a config, by asking or from flags.
 
     `countries` and `currency` exist because `--defaults` is the only path
@@ -680,14 +709,27 @@ def run(path: Path, non_interactive: bool = False, cv: str | None = None,
             a["salary_currency"] = str(currency).strip().upper()
         write_config(path, a)
         print(f"Wrote a default config to {path}.")
+        # Scripts get no question, so the copy happens only when they ask for
+        # it: it writes outside the checkout. A failed copy is the exit code.
+        skills_rc = 0
+        if install_skills:
+            print("Installing skills:")
+            from . import skills_install
+            skills_rc = skills_install.report(skills_install.install_skills())
+            if fetch_natural_writing:
+                skills_rc = skills_install.report(
+                    [skills_install.fetch_natural_writing()]) or skills_rc
+            elif not skills_install.natural_writing_present():
+                print("  note: drafting needs natural-writing; add --fetch-natural-writing, "
+                      f"or: git clone {skills_install.NATURAL_WRITING_URL}")
         if scan:
             if seed:
                 seed_first(path)
-            return first_scan(path)
+            return first_scan(path) or skills_rc
         if seed:
             seed_first(path)
         print("Edit it, then run `job-radar scan` for everything else.")
-        return 0
+        return skills_rc
 
     if not sys.stdin.isatty():
         print("`job-radar setup` asks questions, so it needs a terminal.")
@@ -891,6 +933,13 @@ def run(path: Path, non_interactive: bool = False, cv: str | None = None,
 
     write_config(path, a)
     print(f"\nWrote {path}")
+    # Before the seed and the scan, which take minutes and can be interrupted:
+    # the question is cheap and should not be lost to a Ctrl-C.
+    if install_skills is None:
+        offer_skills()
+    elif install_skills:
+        from . import skills_install
+        skills_install.report(skills_install.install_skills())
     if seed:
         seed_first(path)
     return first_scan(path)

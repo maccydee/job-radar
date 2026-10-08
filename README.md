@@ -55,8 +55,10 @@ cd job-radar && python3 install.py
 That is the whole install. It checks your Python is 3.10 or newer, creates a
 virtual environment beside the checkout, installs the two dependencies
 (`requests` and `PyYAML`), and hands straight over to setup, which asks for
-your CV, asks what you are looking for, writes the config and runs the first
-scan. `install.py` imports nothing outside the standard library, because it
+your CV, asks what you are looking for, writes the config, offers to copy the
+bundled [skills](skills/README.md) into `~/.claude/skills` so Claude Code can
+use them from any folder (nothing already there is overwritten), and runs the
+first scan. `install.py` imports nothing outside the standard library, because it
 runs before anything is installed.
 
 Already have an environment, or prefer the steps:
