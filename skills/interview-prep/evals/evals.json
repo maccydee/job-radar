@@ -1,0 +1,42 @@
+{
+ "skill_name": "interview-prep",
+ "evals": [
+  {
+   "id": 1,
+   "prompt": "i have a hiring manager call at Northwind Labs on Thursday 10:00 with Jane Okafor, she is the VP Engineering. help me prepare. no web access in this session. put documents in ./docs",
+   "expected_output": "Builds the pack with stage hiring manager, reads it, does not invent facts about Jane Okafor, answers only from the master CV, flags the Terraform gap honestly, saves a prep sheet.",
+   "files": [],
+   "assertions": [
+    "Ran `job-radar interview ... --stage \"hiring manager\"` and read the file",
+    "Jane Okafor details are marked not found / UNVERIFIED, not invented",
+    "Example answers use only facts in master-cv.md (six engineers, hired four, backlog 63 to one to three, Kubernetes, zero-day IC) and no invented numbers",
+    "Flags Terraform (in the posting, not in the CV) as a gap and gives an honest bridge, not a claim of Terraform experience",
+    "Saved a prep sheet file and gave its absolute path",
+    "Said that company/interviewer research could not be done without web access"
+   ]
+  },
+  {
+   "id": 2,
+   "prompt": "i have a recruiter screen at Northwind Labs tomorrow, can you get me ready? no web access in this session. put documents in ./docs",
+   "expected_output": "The application has no CV recorded. The agent must say so and ask which file was sent rather than assuming one.",
+   "files": [],
+   "assertions": [
+    "Ran `job-radar interview` for Northwind Labs",
+    "Response says the pack records no CV for this application",
+    "Asks which CV file was actually sent instead of assuming the master or newest CV",
+    "Contains no claim about experience that is not in master-cv.md"
+   ]
+  },
+  {
+   "id": 3,
+   "prompt": "can we do a mock interview for the Northwind Labs hiring manager round? i want to practise answering. no web access",
+   "expected_output": "A mock interview asks one question at a time and waits for the answer.",
+   "files": [],
+   "assertions": [
+    "Asks exactly one interview question and then stops to wait for the user's answer",
+    "The question is relevant to a hiring manager round for an Engineering Manager, Platform role",
+    "Does not write the candidate's answer for them in the same turn"
+   ]
+  }
+ ]
+}
