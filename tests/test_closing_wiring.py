@@ -144,10 +144,15 @@ def test_closing_within_excludes_settled_roles():
 
 
 def test_a_dashboard_row_with_a_closing_date_says_so():
+    # A month from today, not a fixed date. render() words the note against
+    # the real clock, so a hard-coded 2026-10-23 began reading "Closed 23 Oct"
+    # on the 24th and this test failed with no code change. A substring, so
+    # the year the page adds when a month out crosses New Year still matches.
     con, uid = _db("")
-    store.set_closing(con, uid, "2026-10-23", "by hand")
+    closes = (date.today() + timedelta(days=30)).isoformat()
+    store.set_closing(con, uid, closes, "by hand")
     page = interactive.render(con)
-    assert "Closes 23 Oct" in page
+    assert "Closes " + interactive._short_date(closes) in page
 
 
 def test_rescreen_reads_closing_dates_and_says_what_it_could_not_read():
