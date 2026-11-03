@@ -94,9 +94,75 @@ def test_the_facet_counts_are_counted_against_the_tab_you_are_in():
     # current tab admits. Named individually rather than matched as one call
     # string: a new facet used to break this test purely by being added, which
     # is a failure that says nothing about whether the counts are right.
-    assert "paintCounts(cSec,cMode,cEmp,cCountry,cCity)" in SRC
-    for dim in ("cSec", "cMode", "cEmp", "cCountry", "cCity"):
+    assert "paintCounts(cSec,cMode,cEmp,cSt,cCountry,cCity)" in SRC
+    for dim in ("cSec", "cMode", "cEmp", "cSt", "cCountry", "cCity"):
         assert f"{dim}={{}}" in SRC.replace(" ", "") or f"{dim}={{}}," in SRC.replace(" ", ""), dim
+
+
+def _status_chips(page: str) -> list[tuple[dict, str]]:
+    """Each button inside the status chip row: its attributes and its count."""
+    from html.parser import HTMLParser
+
+    class P(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.depth = 0          # >0 while inside the status row
+            self.btn = None
+            self.in_n = False
+            self.out = []
+
+        def handle_starttag(self, tag, attrs):
+            a = dict(attrs)
+            if tag == "div" and "statuses" in (a.get("class") or "").split():
+                self.depth = 1
+            elif self.depth and tag == "div":
+                self.depth += 1
+            elif self.depth and tag == "button":
+                self.btn = [a, ""]
+            elif self.btn and tag == "span" and a.get("class") == "n":
+                self.in_n = True
+
+        def handle_endtag(self, tag):
+            if tag == "span":
+                self.in_n = False
+            elif tag == "button" and self.btn:
+                self.out.append(tuple(self.btn))
+                self.btn = None
+            elif tag == "div" and self.depth:
+                self.depth -= 1
+
+        def handle_data(self, data):
+            if self.in_n and self.btn:
+                self.btn[1] += data
+
+    p = P()
+    p.feed(page)
+    return p.out
+
+
+def test_the_board_offers_one_filter_chip_per_status_in_use():
+    """The tabs only answered in groups. In flight is four statuses and Closed
+    is three, so "just the roles I am interviewing for" or "just the ones I
+    marked interested" had no view at all, and finding them meant scrolling
+    a board of hundreds."""
+    from jobradar.models import Job
+    con = store.connect(":memory:")
+    jobs = [Job(company=f"Co{n}", title="Engineering Manager",
+                url=f"https://boards.greenhouse.io/co/jobs/{n}",
+                platform="greenhouse", location="London")
+            for n in range(5)]
+    store.upsert_roles(con, jobs, run=1)
+    store.set_status(con, jobs[1].uid, "interested")
+    store.set_status(con, jobs[2].uid, "interested")
+    store.set_status(con, jobs[3].uid, "rejected")
+
+    chips = _status_chips(interactive.render(con))
+    got = [(a.get("data-st"), n) for a, n in chips]
+    # In the order a role moves through them, and only the ones held.
+    assert got == [("new", "2"), ("interested", "2"), ("rejected", "1")], got
+    # `button[data-status]` means "set this role's status" to the row click
+    # handler, so a filter chip carrying it would be read as an instruction.
+    assert all("data-status" not in a for a, _ in chips)
 
 
 def test_a_word_with_no_spaces_in_it_cannot_run_off_the_edge():
