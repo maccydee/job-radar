@@ -104,9 +104,16 @@ class ViewSurvivesAReload(unittest.TestCase):
         # A sector whose last role went settled has no chip this time. A set
         # holding a key nothing can clear is a filter that cannot be seen or
         # switched off, and it renders as a board with nothing in it.
+        # Every facet's set is pruned by one loop, so a facet added later
+        # cannot be restored without being pruned. Checked per facet: the
+        # status chips were the first to arrive after the loop.
         load = JS[JS.index("function loadView("):]
-        self.assertIn("secs.delete", load)
-        self.assertIn("modes.delete", load)
+        load = load[:load.index("\n}")]
+        self.assertIn("set.delete(x)", load)
+        prune = load[load.rindex("for(const [set,dim] of"):]
+        for pair in ("[secs,'sec']", "[modes,'mode']", "[emps,'emp']",
+                     "[sts,'st']"):
+            self.assertIn(pair, prune)
 
 
 if __name__ == "__main__":

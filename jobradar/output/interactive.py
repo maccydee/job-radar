@@ -212,7 +212,21 @@ const $=s=>document.querySelector(s), toast=$('#toast');
 // Opens on Open, not All. All includes skipped and rejected, and they sort by
 // score like everything else, so a skipped role you already dismissed sat at
 // the top of the board every time you refreshed.
-let f='open', secs=new Set(), modes=new Set(), emps=new Set(), country='', city='';
+let f='open', secs=new Set(), modes=new Set(), emps=new Set(), sts=new Set(),
+    country='', city='';
+
+// Which facet a chip belongs to, in one place. The answer was a ternary
+// written out separately in the click handler, `loadView` and `paintCounts`,
+// and adding a facet meant finding all three: miss one and its chips toggle
+// but never restore, or restore but never count.
+//
+// Status chips carry `data-st`, never `data-status`. `button[data-status]`
+// already means "set this role's status" to the row click handler below.
+function facet(b){
+  if(b.dataset.sec)  return {set:secs,  key:b.dataset.sec,  dim:'sec'};
+  if(b.dataset.mode) return {set:modes, key:b.dataset.mode, dim:'mode'};
+  if(b.dataset.st)   return {set:sts,   key:b.dataset.st,   dim:'st'};
+  return {set:emps, key:b.dataset.emp, dim:'emp'};}
 
 // The board reloads itself when a screen or a CV finishes, to show the new
 // document. Every reload threw the reader back to Open with no sector, no
@@ -230,7 +244,7 @@ let f='open', secs=new Set(), modes=new Set(), emps=new Set(), country='', city=
 const VIEW_KEY='job-radar:view';
 function saveView(){
   try{ localStorage.setItem(VIEW_KEY, JSON.stringify({
-    f, secs:[...secs], modes:[...modes], emps:[...emps], country, city,
+    f, secs:[...secs], modes:[...modes], emps:[...emps], sts:[...sts], country, city,
     sort:(document.querySelector('#fsort')||{}).value||''})); }catch(e){}}
 function loadView(){
   let v=null;
@@ -250,19 +264,17 @@ function loadView(){
   for(const x of (v.secs||[])) secs.add(x);
   for(const x of (v.modes||[])) modes.add(x);
   for(const x of (v.emps||[])) emps.add(x);
+  for(const x of (v.sts||[])) sts.add(x);
   // Only chips that are still on the page. A sector whose last role went
   // settled has no chip this time round, and a set holding a key nothing can
   // clear is a filter the reader cannot see or switch off.
-  const live=new Set(), liveModes=new Set(), liveEmps=new Set();
+  const live={sec:new Set(), mode:new Set(), emp:new Set(), st:new Set()};
   for(const b of document.querySelectorAll('.chips button')){
-    const key=b.dataset.sec||b.dataset.mode||b.dataset.emp;
-    const set=b.dataset.sec?live:(b.dataset.mode?liveModes:liveEmps);
-    set.add(key);
-    const cur=b.dataset.sec?secs:(b.dataset.mode?modes:emps);
-    if(cur.has(key)) b.setAttribute('aria-pressed','true'); }
-  for(const x of [...secs]) if(!live.has(x)) secs.delete(x);
-  for(const x of [...modes]) if(!liveModes.has(x)) modes.delete(x);
-  for(const x of [...emps]) if(!liveEmps.has(x)) emps.delete(x);
+    const {set,key,dim}=facet(b);
+    live[dim].add(key);
+    if(set.has(key)) b.setAttribute('aria-pressed','true'); }
+  for(const [set,dim] of [[secs,'sec'],[modes,'mode'],[emps,'emp'],[sts,'st']])
+    for(const x of [...set]) if(!live[dim].has(x)) set.delete(x);
   const sort=document.querySelector('#fsort');
   if(sort && v.sort){ const ok=[...sort.options].some(o=>o.value===v.sort);
                       if(ok) sort.value=v.sort; }}
@@ -287,10 +299,11 @@ const CLOSED_OUT=new Set(['rejected','withdrawn','closed']);
 // Each dimension is counted with its own filter left off, because that is
 // what clicking would do: sector chips are an OR within sectors, so with Tech
 // selected the number on Finance is what adding Finance would bring in.
-function paintCounts(sec,mode,emp,ctry,city){
+function paintCounts(sec,mode,emp,st,ctry,city){
+  const by={sec,mode,emp,st};
   for(const b of document.querySelectorAll('.chips button')){
-    const k=b.dataset.sec||b.dataset.mode||b.dataset.emp;
-    const n=(b.dataset.sec?sec:(b.dataset.mode?mode:emp))[k]||0;
+    const {key,dim}=facet(b);
+    const n=by[dim][key]||0;
     const el=b.querySelector('.n'); if(el) el.textContent=n;
     b.classList.toggle('none',n===0);}
   for(const [q,m] of [['#fcountry',ctry],['#fcity',city]])
@@ -299,7 +312,7 @@ function paintCounts(sec,mode,emp,ctry,city){
       o.textContent=(o.dataset.label||o.value)+' ('+(m[o.value]||0)+')';}}
 
 function apply(){let n=0;
-  const cSec={},cMode={},cEmp={},cCountry={},cCity={};
+  const cSec={},cMode={},cEmp={},cSt={},cCountry={},cCity={};
   const bump=(m,k)=>{m[k]=(m[k]||0)+1};
   for(const r of document.querySelectorAll('.row')){
     const st=r.dataset.status;
@@ -317,16 +330,21 @@ function apply(){let n=0;
     // findable, and a default that hid it would be the tool answering a
     // question nobody asked.
     const okEmp  = emps.size===0  || emps.has(r.dataset.emp||'unstated');
+    // Narrows within the tab rather than overriding it, like every other
+    // facet. So under Open a settled status counts 0 and its chip fades;
+    // All or Closed is where those are.
+    const okSt   = sts.size===0   || sts.has(st||'new');
     const okCtry = !country || r.dataset.country===country;
     const okCity = !city    || r.dataset.city===city;
-    if(viewOk&&okMode&&okEmp&&okCtry&&okCity) bump(cSec,r.dataset.sector);
-    if(viewOk&&okSec &&okEmp&&okCtry&&okCity) bump(cMode,r.dataset.mode);
-    if(viewOk&&okSec &&okMode&&okCtry&&okCity) bump(cEmp,r.dataset.emp||'unstated');
-    if(viewOk&&okSec &&okMode&&okEmp&&okCity) bump(cCountry,r.dataset.country);
-    if(viewOk&&okSec &&okMode&&okEmp&&okCtry) bump(cCity,r.dataset.city);
-    const ok = viewOk && okSec && okMode && okEmp && okCtry && okCity;
+    if(viewOk&&okMode&&okEmp&&okSt&&okCtry&&okCity) bump(cSec,r.dataset.sector);
+    if(viewOk&&okSec &&okEmp&&okSt&&okCtry&&okCity) bump(cMode,r.dataset.mode);
+    if(viewOk&&okSec &&okMode&&okSt&&okCtry&&okCity) bump(cEmp,r.dataset.emp||'unstated');
+    if(viewOk&&okSec &&okMode&&okEmp&&okCtry&&okCity) bump(cSt,st||'new');
+    if(viewOk&&okSec &&okMode&&okEmp&&okSt&&okCity) bump(cCountry,r.dataset.country);
+    if(viewOk&&okSec &&okMode&&okEmp&&okSt&&okCtry) bump(cCity,r.dataset.city);
+    const ok = viewOk && okSec && okMode && okEmp && okSt && okCtry && okCity;
     r.hidden=!ok; if(ok)n++;}
-  paintCounts(cSec,cMode,cEmp,cCountry,cCity);
+  paintCounts(cSec,cMode,cEmp,cSt,cCountry,cCity);
   saveView();
   $('#empty').hidden=n>0; $('#list').hidden=n===0;}
 
@@ -437,8 +455,7 @@ function resort(){
 document.querySelectorAll('.chips button').forEach(b=>b.onclick=()=>{
   const on=b.getAttribute('aria-pressed')==='true';
   b.setAttribute('aria-pressed', on?'false':'true');
-  const set=b.dataset.sec?secs:(b.dataset.mode?modes:emps),
-        key=b.dataset.sec||b.dataset.mode||b.dataset.emp;
+  const {set,key}=facet(b);
   on?set.delete(key):set.add(key); apply();});
 // Ranking spends tokens, so the click shows the cost and waits for a yes.
 // Everything else that spends in this tool works the same way.
@@ -1302,6 +1319,16 @@ def render(con, home_currency: str = "") -> str:
         f'<span class="n">{ec[e]}</span></button>'
         for e in (employment.CONTRACT, employment.PERMANENT, employment.UNSTATED)
         if ec.get(e))
+    # One chip per status, because the tabs only answer in groups: In flight
+    # is four statuses and Closed three, so "just the ones I am interviewing
+    # for" or "just the ones I marked interested" had no view at all. Only
+    # statuses somebody holds get a chip, in the order a role moves through
+    # them. `data-st`, not `data-status`: see `facet()` in the script.
+    stc = Counter((r["status"] or "new") for r in rows)
+    statuses = "".join(
+        f'<button aria-pressed="false" data-st="{_h.escape(s, quote=True)}">'
+        f'{_h.escape(s.capitalize())}<span class="n">{stc[s]}</span></button>'
+        for s in store.STATUSES if stc.get(s))
     # data-label so the count can be rewritten in the browser against the rows
     # the current tab actually shows, without losing the name.
     cc = Counter((r["country"] or "unknown") for r in rows)
@@ -1383,6 +1410,7 @@ setTimeout(()=>{{const b=document.getElementById('boot'); if(b) b.remove();}},80
 <div class="chips" role="group" aria-label="Filter by sector">{chips}</div>
 <div class="chips" role="group" aria-label="Filter by working pattern">{modes}</div>
 <div class="chips emps" role="group" aria-label="Filter by employment type">{emps}</div>
+<div class="chips statuses" role="group" aria-label="Filter by status">{statuses}</div>
 <div class="selects">
   <label><span>Sort</span><select id="fsort" aria-label="Sort order">
     <option value="rank">Priority</option>
