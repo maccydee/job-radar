@@ -286,6 +286,20 @@ PHRASE_TABLE = [
      "Let us know if you need to reschedule.", "interview"),
     ("Offer", "We are pleased to offer you the role. Please confirm your interview schedule.",
      "offer"),
+    # Marketing in offer's vocabulary. A lottery email, "pleased to offer you a
+    # December Scratch Advent Calendar", was proposed as a job OFFER from the
+    # Junk folder. An offer is the one status the tool says is the owner's
+    # decision, so a false one is the loudest wrong answer it can give.
+    ("Claim Your December Scratch Advent Calendar",
+     "As a gesture of our appreciation from Example Lottery, we are pleased to offer you a "
+     "December Scratch Advent Calendar.", "other"),
+    ("A thank you from your bank", "We'd like to offer you 20% off your next order.", "other"),
+    ("Exclusive", "We would like to offer you early access to our sale.", "other"),
+    # and the real ones still read as offers, however the job is named
+    ("Your offer", "We are pleased to offer you the position of Engineering Manager.", "offer"),
+    ("Good news", "We would like to offer you a role on the platform team.", "offer"),
+    ("Contract", "We'd like to offer you a six month contract starting in January.", "offer"),
+    ("Formal offer", "Please find attached your offer of employment.", "offer"),
     # acknowledgements with no hedge
     ("You already applied for the job", "You have already applied for this role.",
      "acknowledgement"),

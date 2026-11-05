@@ -55,8 +55,17 @@ _INTERVIEW = [r"confirmed interview", r"interview schedule",
               r"book (?:a|your) (?:time|slot|call)",
               r"availability for an? (?:interview|call)",
               r"(?:love|like|happy|keen) to interview you"]
-_OFFER = [r"pleased to offer you", r"offer of employment",
-          r"we(?:'d| would) like to offer you"]
+# An offer has to name a job. "Pleased to offer you" on its own is also what a
+# lottery says about an advent calendar, and a false offer is the loudest wrong
+# answer this tool can give, because an offer is the one status it says is the
+# owner's decision. So the phrase counts only with a job word later in the same
+# sentence and close by: "the position of", "a role", "the Principal, AI
+# Transformation role", "a six month contract". Not "role-playing".
+_JOB_WORD = r"\b(?:position|role|job|post|contract|employment)\b(?!-)"
+_GAP = r"[^.!?\n]{0,60}?"
+_OFFER = [r"pleased to offer you\b" + _GAP + _JOB_WORD,
+          r"offer of (?:employment|a (?:position|role|job|contract))",
+          r"we(?:'d| would) like to offer you\b" + _GAP + _JOB_WORD]
 _ACK = [r"you already applied",
         r"application (?:was )?(?:sent|received|submitted)",
         r"thank(?:s| you) for (?:applying|your application|your interest)",
