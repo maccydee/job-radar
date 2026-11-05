@@ -23,11 +23,11 @@ Real ones, so the shape is recognisable rather than abstract:
 - Workday's page cap was three, so a 200-role board returned its first 60 and
   looked complete.
 - A pull request titled "Prune 2 dead source(s)" whose diff removed 17,171 of
-  17,810. Every guard passed, because all of them reasoned about the run and
+  17,560. Every guard passed, because all of them reasoned about the run and
   none of them looked at the diff.
 - An adapter reading a key the API does not send. `parse_workable` asked for
   `j["location"]`, which apply.workable.com has never had, so every posting
-  from 2,094 boards was stored with no location and no error anywhere. The
+  from 2,036 boards was stored with no location and no error anywhere. The
   same sweep found iCIMS writing locations in a second markup shape the
   pattern did not match, and Avature in three.
 - A count stored as a place. Workday and Jobvite collapse a multi-location
@@ -76,7 +76,7 @@ Two things are part of the change, not follow-up work.
 **1. Prove every field, not the row count.** A parser that returns the right
 number of rows with an empty column is this repo's signature failure and it
 has shipped repeatedly: `parse_workable` read a key the API has never sent, so
-2,094 boards stored postings with no location and no error, for months;
+2,036 boards stored postings with no location and no error, for months;
 iCIMS wrote locations in a second markup shape the pattern did not match, and
 Avature in three. A row count would have passed every time.
 
@@ -175,7 +175,7 @@ that reaches a shortlist, because most adverts state no salary at all.
   each place the code relies on that.
 - **Never run `generate` or `rank` to test something.** They call a paid model.
   Stub `runner.claude_bin` or `rank._call` and say so.
-- **Be polite to third parties.** There are 17,810 boards here and every one of
+- **Be polite to third parties.** There are 17,560 boards here and every one of
   them belongs to somebody. When you are probing or experimenting by hand, one
   request a second per host and stop after two failures. The scan itself is
   paced by `fetch.PER_HOST_RPS`, which is higher and is measured: see
@@ -212,7 +212,7 @@ while none of them was true. Derive it, or leave it in the run's own output.
 `meta.boards` in `sources/sources.json` is computed by `sources.save()` for
 exactly this reason.
 
-Current, if you need them for a comment: 17,810 employer boards, 17,814
+Current, if you need them for a comment: 17,560 employer boards, 17,564
 entries, 3 keyword templates, 24 board platforms in the data, 33 adapters
 written.
 

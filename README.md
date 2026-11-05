@@ -7,7 +7,7 @@
 Watch employers' job boards directly, and only hear about the roles that pass
 your own filters.
 
-It reads 17,810 employer job boards straight from the applicant tracking
+It reads 17,560 employer job boards straight from the applicant tracking
 systems companies run, normalises 23 board platforms into one shape, and drops
 anything that fails rules you wrote down once. It is for one person running
 their own search on their own machine, and it is built to show you fewer
@@ -90,7 +90,7 @@ job-radar scan        # read the boards again
 
 **Leave that first scan an hour**, and there is a floor under that no setting
 moves. Each host is paced on its own clock, and `apply.workable.com` alone
-holds 2,094 of the bundled boards at 0.7 requests a second, which is fifty
+holds 2,036 of the bundled boards at 0.7 requests a second, which is fifty
 minutes on that one host when it is answering, with everything else
 interleaved behind it. Above the floor the runtime follows how many sources
 you keep and how many requests you allow in flight (`fetch.concurrency`,
@@ -192,10 +192,10 @@ prints them again afterwards: one role to two lines, the score, the title, the
 company and either the stated salary or `unconfirmed`, with the role's id and
 location underneath. `job-radar serve` is that same list with buttons.
 
-**17,810 employer boards across 24 platforms**, plus four cross-employer
+**17,560 employer boards across 24 platforms**, plus four cross-employer
 feeds: LinkedIn, NHS Jobs and Workable's own search, which are keyword
 templates expanded against your titles, and Workable's recently-posted feed,
-which takes no keyword. That is what takes `sources/sources.json` to 17,814
+which takes no keyword. That is what takes `sources/sources.json` to 17,564
 entries. Roughly 4,100 of the boards are Greenhouse and 2,600 Ashby, then
 Workable, iCIMS, Workday, Personio, Breezy, Recruitee, SmartRecruiters and
 Oracle in the four figures or high hundreds, down to Pinpoint and
@@ -206,7 +206,7 @@ FCA among them. The code carries 33 adapters, five more than the bundled
 list uses.
 
 `job-radar coverage` counts the file rather than trusting that paragraph, and
-prints rather more than 17,814, because each of the three keyword templates
+prints rather more than 17,564, because each of the three keyword templates
 becomes one source per title, and per country for the one that takes a
 country. Where the list came from, and the two keyed aggregators you can add
 yourself, are in [docs/SOURCES.md](docs/SOURCES.md).
@@ -532,12 +532,12 @@ working arrangement anybody chooses.
 
 `sources.countries` narrows the list far less than the name suggests, and
 deliberately. It only drops a board whose country tag names somewhere else.
-Of the 17,814 sources, 5,215 carry no country tag at all and 1,597 are tagged
+Of the 17,564 sources, 5,101 carry no country tag at all and 1,588 are tagged
 `multi`, and both kinds survive whatever you set: "we could not tell" and
 "this employer is in several countries" are not evidence that the employer has
 nothing where you are, and a multinational is one of the likelier places to
-find a vacancy in your country. So `sources.countries: [UK]` leaves 7,746
-sources, not the 934 that carry a `UK` tag. It is a way to skip the boards you
+find a vacancy in your country. So `sources.countries: [UK]` leaves 7,612
+sources, not the 923 that carry a `UK` tag. It is a way to skip the boards you
 can prove are somewhere else, not a way to get a UK-only list, and the
 `locations` filters above are what actually decide where a role is. Run
 `job-radar coverage` to see the tag counts for the list you are really using.
@@ -590,8 +590,8 @@ so these are stated rather than left for you to find.
   flagged, read from the description. Most state nothing, and nothing here is
   filtered on it, so treat an unflagged role as unknown rather than as
   available.
-- **Sector filtering is only as good as the tags.** Of 17,814 sources, 6,092
-  carry a sector tag and 11,722 carry none, because an address harvested from
+- **Sector filtering is only as good as the tags.** Of 17,564 sources, 6,047
+  carry a sector tag and 11,517 carry none, because an address harvested from
   a crawl index does not say what industry the employer is in. A `sectors:`
   filter keeps every untagged source as well as the ones you asked for, so it
   never cuts you down to the tagged few, but you cannot ask this list for

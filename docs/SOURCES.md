@@ -2,7 +2,7 @@
 
 [job-radar](../README.md)
 
-The bundled list is 17,810 employer job boards, read straight from the
+The bundled list is 17,560 employer job boards, read straight from the
 applicant tracking system each employer runs, plus three keyword searches.
 This is the long version: why employer boards rather than an aggregator, the
 two aggregators that are in and how to switch them on, every well-known job
@@ -263,29 +263,29 @@ one live snapshot held **five** engineering-leadership titles across roughly
 
 **Fields you cannot select for, because most of the list is still unlabelled.**
 This used to read as a shortage of employers. It is now a shortage of tags. Of
-17,814 sources, **6,092 carry a sector tag and 11,722 carry none**: the harvest
+17,564 sources, **6,047 carry a sector tag and 11,517 carry none**: the harvest
 that took this list from hundreds to thousands read board addresses out of a
 public crawl index, and an address does not say what industry the employer is
-in. The tagged ones are 1,311 healthcare, 1,304 finance, 512 education, 498
-media, 409 energy, 407 retail, 405 technology, 311 construction, 239
-transport, 224 telecoms, 161 public sector, 74 hospitality, 65 charity, 43
-legal, 42 industry, 34 security, 34 professional services and 16 travel.
+in. The tagged ones are 1,304 healthcare, 1,297 finance, 504 education, 498
+media, 405 energy, 405 retail, 405 technology, 311 construction, 239
+transport, 223 telecoms, 161 public sector, 74 hospitality, 63 charity, 43
+legal, 40 industry, 34 security, 34 professional services and 16 travel.
 
 That is less damaging than it sounds, because **a `sectors:` filter keeps every
 untagged source as well as the ones you asked for**. `sectors: [hospitality]`
 does not cut you to seventy-four employers; it drops the sources tagged as
-something else and leaves the 11,722 unlabelled ones in, which is where most
+something else and leaves the 11,517 unlabelled ones in, which is where most
 of any industry actually is. The cost runs the other way: you cannot ask this
 list for "every hospitality employer" and get a true answer, and `job-radar
 coverage` can only report what somebody labelled.
 
 **The country tags work the same way, and `sources.countries` obeys the same
-rule.** 5,215 sources carry no country tag and 1,597 are tagged `multi`, which
+rule.** 5,101 sources carry no country tag and 1,588 are tagged `multi`, which
 means the board belongs to a multinational rather than to one country. Both
 kinds are fetched whatever you set, because "we could not tell" and "several
 countries" are not evidence that the employer has nothing where you are, and
 a multinational is one of the likelier places to find a vacancy in yours. So
-`sources.countries: [UK]` leaves 7,748 sources rather than the 936 tagged
+`sources.countries: [UK]` leaves 7,612 sources rather than the 923 tagged
 `UK`: it skips the boards that can be proved to be somewhere else, and
 `locations.countries` is what actually decides where a role is.
 
@@ -333,7 +333,7 @@ found 23 dead boards, and 19 of those had simply moved ATS and were hiding
 A weekly job in this repository revalidates every board on Sunday mornings and
 opens a pull request pruning anything dead. Growing the list is a separate job
 that does not live here: the crawl-index harvest that found most of these
-17,810 boards runs in a private maintainer repository, so that forking this
+17,560 boards runs in a private maintainer repository, so that forking this
 does not set a crawler loose.
 
 Neither of those reaches your copy on its own, and for a long time nothing

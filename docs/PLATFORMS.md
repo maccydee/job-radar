@@ -12,8 +12,8 @@ these rows account for 23 of them, the Lever row covering both its
 deployments. Nineteen of the rows are platforms the bundled source list
 actually uses; JazzHR, Reed and Adzuna have a row and no entry on it, and
 Cornerstone has a row and no adapter. Four platforms the list does use have no
-row here, three of them large: **Workable's own boards** (2,094 sources),
-**Personio** (1,258), **Recruitee** (992) and Workable's recently-posted feed
+row here, three of them large: **Workable's own boards** (2,036 sources),
+**Personio** (1,240), **Recruitee** (978) and Workable's recently-posted feed
 (1). Personio and Recruitee are two of the five adapters marked unverified,
 and the closing paragraph says what that means. Workable's own boards are
 neither unverified nor unread, and their absence is a gap in this file rather
@@ -156,10 +156,10 @@ limit extends to the anonymous endpoint.
 
 | Host | Boards | Documented limit for the endpoint this tool calls | Where that comes from |
 |---|---|---|---|
-| `boards-api.greenhouse.io` | 4,078 | **None.** The Job Board API page states no rate limit, no 429 contract and no `Retry-After` behaviour anywhere on it. | [Job Board API](https://docs.greenhouse.io/job-board.html). The limit people quote is [Harvest's](https://docs.greenhouse.io/harvest.html), which is scoped in the text to "Harvest API requests" and never mentions the Job Board API. [Newer Harvest docs](https://harvestdocs.greenhouse.io/docs/api-rate-limiting) decline to publish an absolute number at all, so the widely repeated "50 per 10 seconds" is an example header value, not a documented allowance. |
-| `api.ashbyhq.com` | 2,607 | **None** for `/posting-api/job-board/{name}`, and none for the authenticated posting API either. | [Public job posting API](https://developers.ashbyhq.com/docs/public-job-posting-api). The only number anywhere in Ashby's docs is 15 requests a minute for [`report.generate`](https://developers.ashbyhq.com/reference/reportgenerate), scoped per organisation, and generalising it to postings would be inventing a limit rather than finding one. |
-| `api.smartrecruiters.com` | 910 | **10 requests a second**, 8 concurrent, for most endpoints. The Posting API is not on the 2/s list. | [Throttling policies](https://developers.smartrecruiters.com/docs/throttling-policies). The caveat is real: "All throttling policies are applied to an individual Customer API user", so an unauthenticated Posting API call is formally unaddressed. It documents adaptive throttling, 429 with `Retry-After`, and `X-RateLimit-Remaining`. |
-| `jobs.jobvite.com` | 257 | **Not public.** The developer portal is behind a login; the quotas that circulate come from integration vendors. | Nothing citable. This tool scrapes the server-rendered career site, not an API, so no published policy covers it. |
+| `boards-api.greenhouse.io` | 4,034 | **None.** The Job Board API page states no rate limit, no 429 contract and no `Retry-After` behaviour anywhere on it. | [Job Board API](https://docs.greenhouse.io/job-board.html). The limit people quote is [Harvest's](https://docs.greenhouse.io/harvest.html), which is scoped in the text to "Harvest API requests" and never mentions the Job Board API. [Newer Harvest docs](https://harvestdocs.greenhouse.io/docs/api-rate-limiting) decline to publish an absolute number at all, so the widely repeated "50 per 10 seconds" is an example header value, not a documented allowance. |
+| `api.ashbyhq.com` | 2,573 | **None** for `/posting-api/job-board/{name}`, and none for the authenticated posting API either. | [Public job posting API](https://developers.ashbyhq.com/docs/public-job-posting-api). The only number anywhere in Ashby's docs is 15 requests a minute for [`report.generate`](https://developers.ashbyhq.com/reference/reportgenerate), scoped per organisation, and generalising it to postings would be inventing a limit rather than finding one. |
+| `api.smartrecruiters.com` | 901 | **10 requests a second**, 8 concurrent, for most endpoints. The Posting API is not on the 2/s list. | [Throttling policies](https://developers.smartrecruiters.com/docs/throttling-policies). The caveat is real: "All throttling policies are applied to an individual Customer API user", so an unauthenticated Posting API call is formally unaddressed. It documents adaptive throttling, 429 with `Retry-After`, and `X-RateLimit-Remaining`. |
+| `jobs.jobvite.com` | 254 | **Not public.** The developer portal is behind a login; the quotas that circulate come from integration vendors. | Nothing citable. This tool scrapes the server-rendered career site, not an API, so no published policy covers it. |
 | `api.eu.lever.co`, `api.lever.co` | 40, 25 | **None** for reading postings. The one documented number is 2 POSTs a second for application submissions, which is a different endpoint. | [Postings API README](https://github.com/lever/postings-api/blob/master/README.md). The 10/s with bursts to 20 in [Lever's developer docs](https://hire.lever.co/developer/documentation) is explicitly "by API key", and this tool sends no key. |
 | iCIMS, Workday, Personio, Recruitee, Breezy, Teamtailor, BambooHR | 1 board per host | Irrelevant to pacing, because each employer is its own host and is asked once. Where a limit is documented (iCIMS 10,000 calls a day per customer, Recruitee 1,000 a minute per token, Teamtailor 50 per 10 seconds) it is per customer or per token and nowhere near what one board costs. | iCIMS and Recruitee and Teamtailor developer docs. |
 
@@ -194,7 +194,7 @@ answer to how long a scan takes.
 
 What can be said for it: no host has been recorded refusing at 3.0, and the
 sample runs behind that commit drew zero 429s. Every full scan since has put
-4,078 requests through `boards-api.greenhouse.io` at that rate, roughly 23
+4,034 requests through `boards-api.greenhouse.io` at that rate, roughly 23
 minutes end to end, without a refusal that reached the report. That is
 genuine evidence, and it is evidence about the floor rather than the ceiling:
 it says 3.0 is safe and says nothing at all about 4, or 6, or 10.
@@ -278,7 +278,7 @@ there: it returns HTTP 200 with an empty array both for a token that does not
 exist and for one being rate-limited, so a probe watching for 429 on that host
 watches the wrong thing and would report "no refusals" while being refused.
 
-Not probed, deliberately. `jobs.jobvite.com` is 257 boards and 1.4 minutes,
+Not probed, deliberately. `jobs.jobvite.com` is 254 boards and 1.4 minutes,
 it is a scraped career site rather than an API, and it sits behind Cloudflare;
 there is no case for pushing it when the whole prize is 84 seconds. The two
 Lever hosts are 65 boards between them, 13 seconds, and equally not worth a
@@ -297,14 +297,14 @@ cautious of two otherwise identical measurements.
 
 | Host | Boards | Documented | Tolerated | Today | Recommended | Why |
 |---|---|---|---|---|---|---|
-| `boards-api.greenhouse.io` | 4,078 | none published | 6.39/s x 360, clean | 3.0 | **5.0** | Nothing is documented, so this rests on measurement alone and keeps about 20% under the highest rate observed clean. Every request is an origin hit. Total volume does not change: 4,078 requests either way, just spread over 13.6 minutes instead of 22.7. |
-| `api.ashbyhq.com` | 2,607 | none published | 6.36/s x 300, clean, no empty-200 drift | 3.0 | **5.0** | Same evidence and same margin. Part of the load is served from Cloudflare's cache, which argues for at least as much headroom as Greenhouse rather than less. |
-| `api.smartrecruiters.com` | 910 | **10/s**, 8 concurrent | 7.75/s x 300, clean | 3.0 | **8.0** | The only host here with a published number. 8.0 sits under it with margin, and under the documented 8-concurrent rule. Worth 3.2 minutes. |
-| `jobs.jobvite.com` | 257 | not public | not probed | 3.0 | **3.0** | 1.4 minutes. Scraped HTML behind Cloudflare, no published policy, nothing to gain. |
-| `api.eu.lever.co` | 40 | none for reads | not probed | 3.0 | **3.0** | 13 seconds. |
+| `boards-api.greenhouse.io` | 4,034 | none published | 6.39/s x 360, clean | 3.0 | **5.0** | Nothing is documented, so this rests on measurement alone and keeps about 20% under the highest rate observed clean. Every request is an origin hit. Total volume does not change: 4,034 requests either way, just spread over 13.6 minutes instead of 22.7. |
+| `api.ashbyhq.com` | 2,573 | none published | 6.36/s x 300, clean, no empty-200 drift | 3.0 | **5.0** | Same evidence and same margin. Part of the load is served from Cloudflare's cache, which argues for at least as much headroom as Greenhouse rather than less. |
+| `api.smartrecruiters.com` | 901 | **10/s**, 8 concurrent | 7.75/s x 300, clean | 3.0 | **8.0** | The only host here with a published number. 8.0 sits under it with margin, and under the documented 8-concurrent rule. Worth 3.2 minutes. |
+| `jobs.jobvite.com` | 254 | not public | not probed | 3.0 | **3.0** | 1.4 minutes. Scraped HTML behind Cloudflare, no published policy, nothing to gain. |
+| `api.eu.lever.co` | 39 | none for reads | not probed | 3.0 | **3.0** | 13 seconds. |
 | `api.lever.co` | 25 | none for reads | not probed | 3.0 | **3.0** | 8 seconds. |
-| `*.icims.com` | 1,744 | 10,000/day per customer | n/a | 3.0 | **3.0**, and it is never read | One board per host. The rate is not consulted on a host asked once. |
-| `*.myworkdayjobs.com` | 1,489 | none published | n/a | 3.0 | **3.0** | One board per host, but 5.36 requests per board, so this is the one platform where the default rate is consulted on a single-board host: it paces the pages of one tenant's own board. Leave it. Community reporting is that Workday's edge limits by source IP across all tenants at once, which is an argument for keeping the gap rather than removing it. |
+| `*.icims.com` | 1,725 | 10,000/day per customer | n/a | 3.0 | **3.0**, and it is never read | One board per host. The rate is not consulted on a host asked once. |
+| `*.myworkdayjobs.com` | 1,486 | none published | n/a | 3.0 | **3.0** | One board per host, but 5.36 requests per board, so this is the one platform where the default rate is consulted on a single-board host: it paces the pages of one tenant's own board. Leave it. Community reporting is that Workday's edge limits by source IP across all tenants at once, which is an argument for keeping the gap rather than removing it. |
 | `*.jobs.personio.de` and every other single-board host | ~7,749 hosts | mostly none | n/a | 3.0 | **3.0**, unread | One request each. |
 
 `PER_HOST_RPS` and `DEFAULT_PER_HOST_RPS` both live in `jobradar/fetch.py`.
@@ -322,9 +322,9 @@ costs 5.36 requests a board, Phenom 8.12, SuccessFactors 6.38 and Avature 4.38:
 
 Two floors, and the scan cannot beat the larger:
 
-    per-host   Greenhouse   4,078 requests / 3.0 per second  =  22.7 min
-                            4,078 requests / 5.0 per second  =  13.6 min
-               Ashby        2,607 / 3.0 = 14.5 min,  / 5.0 = 8.7 min
+    per-host   Greenhouse   4,034 requests / 3.0 per second  =  22.7 min
+                            4,034 requests / 5.0 per second  =  13.6 min
+               Ashby        2,573 / 3.0 = 14.5 min,  / 5.0 = 8.7 min
                SmartRecr.     910 / 3.0 =  5.1 min,  / 8.0 = 1.9 min
     machine    190.6 request-minutes / 16 workers            =  11.9 min
 

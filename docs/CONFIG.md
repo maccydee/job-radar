@@ -67,40 +67,40 @@ absent.
 ## sectors
 
 Which employers to watch. Empty means all of them. These are the tags that
-actually exist in the bundled list, out of 17,814 sources:
+actually exist in the bundled list, out of 17,564 sources:
 
 | sector | sources |
 |---|---|
-| `untagged` | 11,722 |
-| `healthcare` | 1,311 |
-| `finance` | 1,304 |
-| `education` | 512 |
-| `media` | 498 |
-| `energy` | 409 |
-| `retail` | 407 |
-| `technology` | 409 |
+| `untagged` | 11,517 |
+| `healthcare` | 1,304 |
+| `finance` | 1,297 |
+| `education` | 504 |
+| `media` | 493 |
+| `energy` | 404 |
+| `retail` | 405 |
+| `technology` | 407 |
 | `construction` | 311 |
-| `transport` | 239 |
-| `telecoms` | 224 |
-| `public-sector` | 161 |
+| `transport` | 237 |
+| `telecoms` | 223 |
+| `public-sector` | 159 |
 | `hospitality` | 74 |
-| `charity` | 65 |
+| `charity` | 63 |
 | `legal` | 43 |
-| `industry` | 42 |
+| `industry` | 40 |
 | `security` | 34 |
 | `professional-services` | 33 |
 | `travel` | 16 |
 
-**Read the first row before setting this.** Only 6,092 sources carry a tag at
+**Read the first row before setting this.** Only 6,047 sources carry a tag at
 all. The rest arrived from a crawl-index harvest that knows a board's address
-and not the employer's industry, so `healthcare` being 1,311 is a count of
+and not the employer's industry, so `healthcare` being 1,304 is a count of
 labels, not a count of healthcare employers, and `public-sector` in
 particular catches a lot of noise a name-based rule cannot filter out (US
 municipal and non-profit employers as often as UK public bodies).
 
 Setting `sectors` **keeps every untagged source as well** as the ones tagged
 with what you asked for. So it removes the labelled sources you did not ask
-for and leaves the other 11,722 in place, which is why it narrows the list far
+for and leaves the other 11,517 in place, which is why it narrows the list far
 less than the numbers above suggest. A tag that is not in this table is
 refused at load rather than quietly matching nothing. Check yours with
 `job-radar coverage`, which counts the file rather than this table.
@@ -111,7 +111,7 @@ refused at load rather than quietly matching nothing. Check yours with
 |---|---|---|
 | `use_bundled` | true / false | |
 | `auto_update` | true / false | Default true. `scan` fetches the current published source list before it reads anything, and only when the copy here is more than eight days old: one conditional request to one host, at most once a day. It never writes `sources/sources.json`, which is tracked; the download lands in `state/sources-upstream.json` and a scan reads whichever of the two was `checked` more recently. A download that will not parse, carries no date, is older than yours, or holds under 80% of the sources you already have is refused and reported rather than installed, and the scan runs on the list it has. Set false if you curate your own list or run with no outbound network; `scan --no-source-update` is the same switch for one run. See [SOURCES.md](SOURCES.md). |
-| `countries` | list of codes | Only drops a source whose country tag names somewhere else, which is 10,068 of the 17,814. The other 7,746 are fetched whatever you set: 5,215 carry no tag, and 1,597 are tagged `multi`, meaning the board belongs to a multinational rather than to one country. Neither is evidence the employer has nothing where you are, and a multinational is one of the likelier places to find a vacancy in your country, so both are kept. `[UK]` therefore leaves 7,746 sources rather than the 934 tagged `UK`. This trims what gets fetched; `locations.countries` is what decides where a role is. |
+| `countries` | list of codes | Only drops a source whose country tag names somewhere else, which is 9,952 of the 17,564. The other 7,612 are fetched whatever you set: 5,101 carry no tag, and 1,588 are tagged `multi`, meaning the board belongs to a multinational rather than to one country. Neither is evidence the employer has nothing where you are, and a multinational is one of the likelier places to find a vacancy in your country, so both are kept. `[UK]` therefore leaves 7,746 sources rather than the 923 tagged `UK`. This trims what gets fetched; `locations.countries` is what decides where a role is. |
 | `extra` | list | Either a bare URL string, or `{company, url, platform}`. `job-radar discover <name> --add` writes these for you. An entry may also carry `employment`, below. |
 | `extra[].employment` | `contract` / `permanent` / `unstated` | What this source's own QUERY already filtered for, on the platforms that filter at the request and send no per-result flag. Every posting the source returns is labelled with it, so this is only safe where somebody has checked that the filter actually filters. Reed is the case it exists for: `contract=true` returns 418 results for "engineering manager", `permanent=true` returns 3,584, unfiltered returns 4,112, and the two filtered pages share no postings, so the query is the only place the answer lives. Two LinkedIn sources asserting `f_JT=C` and `f_JT=T` were added and removed the same day for the opposite reason: `f_JT=T` was ignored entirely and `f_JT=C` returned a different set of full-time roles. A wrong value here mislabels every row the source returns and nothing on the row shows where the label came from. |
 | `reed_api_key` | string | Free key from <https://www.reed.co.uk/developers/jobseeker>, needed only if you add the Reed source. Falls back to the `REED_API_KEY` environment variable when blank, which is the route for GitHub Actions. **Put a real key in `config.local.yaml`, never in `config.yaml`**: the second one is the file a fork force-adds for GitHub Actions, so it is the one that ends up committed. Blank means the Reed source is skipped, with a message naming it. |
