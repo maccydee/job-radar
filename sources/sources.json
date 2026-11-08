@@ -3,10 +3,10 @@
   "note": "employer boards discovered from Common Crawl's columnar index and verified live; keyword-driven platforms are templates expanded from your own titles",
   "version": 6,
   "validated": "2026-08-25",
-  "checked": "2026-11-01",
-  "boards": 19919,
+  "checked": "2026-11-08",
+  "boards": 19921,
   "pruned": 0,
-  "grown": 3
+  "grown": 2
  },
  "sources": [
   {
@@ -21528,6 +21528,14 @@
    "company": "Electronic Arts",
    "url": "https://jobs.ea.com/pl_PL/careers/SearchJobs/?jobRecordsPerPage=50",
    "platform": "avature"
+  },
+  {
+   "company": "Electronic Arts",
+   "url": "https://jobs.ea.com/en_US/careers/SearchJobs/?jobRecordsPerPage=50",
+   "platform": "avature",
+   "sector": "media",
+   "country": "UK",
+   "domain": "ea.com"
   },
   {
    "company": "Emil Frey France",
@@ -62515,6 +62523,13 @@
    "country": "multi"
   },
   {
+   "company": "Himalayas",
+   "url": "https://himalayas.app/jobs/api/search?q={keyword}&country={country}",
+   "platform": "himalayas",
+   "country": "multi",
+   "keyword_template": true
+  },
+  {
    "company": "001-Dialysis Clinic, Inc.-Nashville, TN- Corporate Office",
    "url": "https://careers-dialysisclinic.icims.com/jobs/search?ss=1&in_iframe=1",
    "platform": "icims",
@@ -95680,6 +95695,14 @@
    "platform": "smartrecruiters",
    "sector": "education",
    "country": "AT"
+  },
+  {
+   "company": "Deloitte",
+   "url": "https://api.smartrecruiters.com/v1/companies/Deloitte6/postings?limit=100",
+   "platform": "smartrecruiters",
+   "sector": "professional-services",
+   "country": "UK",
+   "domain": "deloitte.com"
   },
   {
    "company": "Deloitte NZ",
